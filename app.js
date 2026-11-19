@@ -137,6 +137,15 @@ async function getWeather(lat, lng) {
   }
 }
 
+// Taxis near (lat, lng) from whatever list is cached, without waiting for the network.
+function cachedTaxisNear(lat, lng) {
+  return (state.taxis || [])
+    .map(([tlng, tlat]) => metersFrom(lat, lng, tlat, tlng))
+    .filter((p) => Math.hypot(p.x, p.y) <= TAXI_RADIUS_M)
+    .sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))
+    .slice(0, MAX_TAXIS);
+}
+
 async function getTaxis(lat, lng) {
   try {
     if (!state.taxis || Date.now() - state.taxisAt > TAXI_TTL_MS) {
@@ -147,11 +156,7 @@ async function getTaxis(lat, lng) {
       }).finally(() => { state.taxisReq = null; });
       await state.taxisReq;
     }
-    return state.taxis
-      .map(([tlng, tlat]) => metersFrom(lat, lng, tlat, tlng))
-      .filter((p) => Math.hypot(p.x, p.y) <= TAXI_RADIUS_M)
-      .sort((a, b) => Math.hypot(a.x, a.y) - Math.hypot(b.x, b.y))
-      .slice(0, MAX_TAXIS);
+    return cachedTaxisNear(lat, lng);
   } catch {
     return [];
   }
@@ -330,7 +335,13 @@ function renderServices({ services, weather, chars, slots }) {
 }
 
 // ---------- Stage 3 scene data ----------
-async function updateScene({ services, chars, slots, stop }, ticket, code) {
+// Each scene update takes a number; a taxi list that arrives late is drawn only if no newer update has started.
+let sceneSeq = 0;
+
+// Draws the buses at once with the cached taxis, then again when a fresh taxi list arrives.
+// It must not wait on the refresh gate: the gate closes once weather and artwork are in,
+// which is often before the (large, slow) taxi list, and the buses were then never drawn.
+async function updateScene({ services, chars, slots, stop }, code) {
   const [lng, lat] = stop;
   const buses = [];
   let noGps = 0;
@@ -347,25 +358,31 @@ async function updateScene({ services, chars, slots, stop }, ticket, code) {
       });
     });
   }
-  const taxis = sceneTaxis(state.showTaxis, state.showTaxis ? await getTaxis(lat, lng) : []);
-  if (!gate.isCurrent(ticket)) return;
-  state.scene.setData({ stopKey: code, stopName: stopLabel(code).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
+  const seq = ++sceneSeq;
+  state.scene.setData({
+    stopKey: code, stopName: stopLabel(code).name, buses, showTaxis: state.showTaxis, kind: document.body.dataset.weather,
+    taxis: sceneTaxis(state.showTaxis, cachedTaxisNear(lat, lng)),
+  });
   const placed = buses.filter((b) => b.first).length;
   $('scene-note').textContent = sceneNote(placed, noGps);
+  if (!state.showTaxis) return;
+  const taxis = await getTaxis(lat, lng);
+  // Drop it if the rider left this stop or a newer scene update has started.
+  if (seq !== sceneSeq || state.stopCode !== code) return;
+  state.scene.setData({ taxis: sceneTaxis(state.showTaxis, taxis), showTaxis: state.showTaxis });
 }
 
-let redrawSeq = 0;
 // Redraw the scene from the last data (taxi toggle). No arrivals fetch, no refresh gate.
 async function redrawScene() {
   const latest = state.latest;
   const code = state.stopCode;
   if (!latest || !code) return;
-  const seq = ++redrawSeq;
+  const seq = ++sceneSeq;
   const [lng, lat] = latest.stop;
   // getTaxis serves the cache when fresh (needsTaxiFetch false) and shares one in-flight request otherwise.
   const taxis = sceneTaxis(state.showTaxis, state.showTaxis ? await getTaxis(lat, lng) : []);
   // Drop the draw if the user left this stop, new data arrived, or a later toggle superseded this one.
-  if (seq !== redrawSeq || state.stopCode !== code || state.latest !== latest) return;
+  if (seq !== sceneSeq || state.stopCode !== code || state.latest !== latest) return;
   state.scene.setData({ stopName: stopLabel(code).name, taxis, showTaxis: state.showTaxis });
 }
 
@@ -423,7 +440,7 @@ async function refresh() {
         state.latestCode = code;
         setBoardStatus('');
         renderServices(latest);
-        updateScene(latest, ticket, code).catch(() => {});
+        updateScene(latest, code).catch(() => {});
       },
     }));
   } catch {
