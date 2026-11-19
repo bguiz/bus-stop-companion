@@ -16,7 +16,7 @@ test('index.html head links icon, apple-touch-icon, manifest, theme-color (relat
 });
 
 test('referenced files exist', () => {
-  for (const f of ['icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'manifest.webmanifest', 'scripts/make-icons.py']) {
+  for (const f of ['icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'manifest.webmanifest', 'scripts/make-logo.py']) {
     assert.ok(existsSync(p(f)), f);
   }
 });
