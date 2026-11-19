@@ -132,7 +132,8 @@ input[type="search"] {
 /* ---------- scene ---------- */
 .scenebox canvas { display: block; width: 100%; height: min(72vh, 520px); border-radius: var(--radius); border: 1px solid var(--card-border); touch-action: pan-y; }
 .scenebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; }
-.scenebar label { color: var(--muted); font-size: 0.9rem; }
+.scenebar label { color: var(--muted); font-size: 0.9rem; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.scenebar input { width: 22px; height: 22px; margin: 0; }
 
 /* ---------- collection + ride button ---------- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
@@ -148,7 +149,7 @@ input[type="search"] {
 .detail { margin-top: 12px; padding: 12px; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); }
 .detail h2 { margin: 0 0 4px; font-size: 1.1rem; }
 .detail p { margin: 2px 0 10px; color: var(--muted); font-size: 0.9rem; }
-.ride { font: inherit; font-size: 0.75rem; padding: 2px 10px; border-radius: 999px; cursor: pointer; color: var(--muted); background: transparent; border: 1px solid var(--card-border); }
+.ride { font: inherit; font-size: 0.9rem; min-height: 44px; padding: 8px 16px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; cursor: pointer; color: var(--muted); background: transparent; border: 1px solid var(--card-border); }
 .ride[aria-pressed="true"] { color: #0e2a1a; background: var(--good); border-color: var(--good); }
 .tag.new { color: #1a1306; background: var(--accent); border-color: var(--accent); font-weight: 700; }
 .cellimg { width: 100%; height: 100%; object-fit: cover; object-position: top; display: grid; place-items: center; font-size: 1.6rem; color: var(--muted); }

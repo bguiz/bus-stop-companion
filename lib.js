@@ -142,3 +142,47 @@ export function sceneRadius(distances) {
 export function ringStep(radius) {
   return [2000, 1000, 500, 200, 100].find((s) => radius / s >= 2) ?? 100;
 }
+
+// ---------- P2-3 to P2-7 ----------
+
+/** Search stops. Rank: exact name, name prefix, code prefix, name contains, road contains; ties by code. */
+export function findStops(stops, query, limit = 25) {
+  const q = String(query ?? '').trim().toLowerCase();
+  if (q.length < 2) return { codes: [], total: 0 };
+  const hits = [];
+  for (const [code, [, , name, road]] of Object.entries(stops)) {
+    const n = name.toLowerCase();
+    let rank = -1;
+    if (n === q) rank = 0;
+    else if (n.startsWith(q)) rank = 1;
+    else if (code.startsWith(q)) rank = 2;
+    else if (n.includes(q)) rank = 3;
+    else if (road.toLowerCase().includes(q)) rank = 4;
+    if (rank >= 0) hits.push([rank, code]);
+  }
+  hits.sort((a, b) => a[0] - b[0] || (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+  return { codes: hits.slice(0, limit).map((h) => h[1]), total: hits.length };
+}
+
+/** Re-selecting the open stop replaces the history entry; anything else pushes one. */
+export function historyAction(currentStopCode, nextCode) {
+  return currentStopCode != null && currentStopCode === nextCode ? 'replace' : 'push';
+}
+
+/** Collected characters first (oldest first-date first, ties in pool order), then locked ones in pool order. */
+export function orderPool(pool, collection) {
+  const owned = [];
+  const locked = [];
+  pool.forEach((c, i) => (collection[c.id] ? owned.push([c, i]) : locked.push(c)));
+  owned.sort((a, b) => {
+    const fa = collection[a[0].id].first;
+    const fb = collection[b[0].id].first;
+    return fa < fb ? -1 : fa > fb ? 1 : a[1] - b[1];
+  });
+  return [...owned.map((o) => o[0]), ...locked];
+}
+
+/** Log a day of use. Only a stop view counts; the home page does not. */
+export function recordOpen(days, today, view) {
+  return view === 'stop' ? logOpen(days, today) : days;
+}
