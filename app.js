@@ -11,6 +11,7 @@ import { pickerState } from './fixes/picker-close.js';
 import { announcements, nextTab } from './fixes/a11y.js';
 import { failureMode, staleLabel } from './fixes/keep-last-list.js';
 import { needsFetch, chooseForecast, themeKind } from './fixes/weather-fallback.js';
+import { locationOutcome, formatDistance } from './fixes/geo-far.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -601,7 +602,7 @@ function selectStop(code, { push = true } = {}) {
   startPolling();
 }
 
-function renderResults(codes, note) {
+function renderResults(codes, note, distances) {
   const ul = $('results');
   ul.textContent = '';
   $('picker-msg').textContent = note || '';
@@ -610,7 +611,7 @@ function renderResults(codes, note) {
     const li = el('li');
     const btn = el('button');
     btn.type = 'button';
-    btn.append(el('div', 'n', name), el('div', 'm', `${road} · ${code}`));
+    btn.append(el('div', 'n', name), el('div', 'm', `${road} · ${code}${distances?.has(code) ? ` · ${distances.get(code)}` : ''}`));
     btn.addEventListener('click', () => selectStop(code));
     li.append(btn);
     ul.append(li);
@@ -632,12 +633,8 @@ function findNearest() {
   $('picker-msg').textContent = 'Finding where you are…';
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
-      const scored = Object.entries(state.stops).map(([code, [lng, lat]]) => {
-        const dLat = lat - coords.latitude;
-        const dLng = (lng - coords.longitude) * Math.cos((coords.latitude * Math.PI) / 180);
-        return [code, dLat * dLat + dLng * dLng];
-      }).sort((a, b) => a[1] - b[1]).slice(0, 6).map(([code]) => code);
-      renderResults(scored, 'Nearest stops to you:');
+      const out = locationOutcome(state.stops, coords.latitude, coords.longitude);
+      renderResults(out.codes, out.note, new Map(out.items.map((i) => [i.code, formatDistance(i.meters)])));
     },
     () => renderResults([], 'Could not get your location. Use search instead.'),
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
