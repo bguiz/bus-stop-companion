@@ -162,9 +162,15 @@ async function getTaxis(lat, lng) {
   }
 }
 
+// Is the cached forecast still young enough to use when a refresh fails?
+function forecastUsable() {
+  return Boolean(state.forecast) && Date.now() - state.forecastAt <= FORECAST_MAX_STALE_MS;
+}
+
 function showWeather(w) {
   const node = $('weather');
-  document.body.dataset.weather = themeKind(w, document.body.dataset.weather);
+  // A brief failure keeps the current theme; once the forecast is too old to use, go back to the default.
+  document.body.dataset.weather = themeKind(w, forecastUsable() ? document.body.dataset.weather : 'fair');
   node.hidden = !w;
   if (!w) return;
   node.textContent = '';
@@ -403,13 +409,15 @@ async function refresh() {
       fetchArrivals: () => fetchJson(`${ARRIVALS_API}?id=${encodeURIComponent(code)}`),
       fetchWeather: async () => {
         const w = await getWeather(lat, lng);
-        if (w) state.weather = { code, w };
+        // Remember when the forecast behind it was fetched, so it expires with the forecast.
+        if (w) state.weather = { code, w, at: state.forecastAt };
         return w;
       },
       fetchChars: (ids) => ensureCharacters(ids),
       cachedChars: () => store.get('chars-v1', {}),
       lastWeather: () => {
-        if (state.weather && state.weather.code === code) return state.weather.w;
+        // The last weather at this stop, but never from a forecast older than the 30-minute limit.
+        if (state.weather && state.weather.code === code && Date.now() - state.weather.at <= FORECAST_MAX_STALE_MS) return state.weather.w;
         // First draw at a new stop: use the cached forecast (if recent) rather than showing nothing.
         const f = chooseForecast({ cached: state.forecast, cachedAt: state.forecastAt, now: Date.now(), ttlMs: FORECAST_MAX_STALE_MS, maxStaleMs: FORECAST_MAX_STALE_MS });
         try { return f ? forecastWeather(f, lat, lng) : null; } catch { return null; }
