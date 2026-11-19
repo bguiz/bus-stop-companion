@@ -50,9 +50,9 @@ test('metersFrom: north and east offsets', () => {
   assert.ok(Math.abs(e.x - 111.2 * Math.cos(1.3 * Math.PI / 180)) < 1 && Math.abs(e.y) < 0.001);
 });
 test('recordBoarded: first boarding is new, repeats add rides', () => {
-  let r = recordBoarded({}, { id: 1, svc: '96' }, '2026-11-19');
+  let r = recordBoarded({}, { id: 1, svc: '96' }, '2026-11-19', 0);
   assert.equal(r.isNew, true); assert.equal(r.collection[1].rides, 1);
-  r = recordBoarded(r.collection, { id: 1, svc: '96' }, '2026-11-20');
+  r = recordBoarded(r.collection, { id: 1, svc: '96' }, '2026-11-20', 86400000);
   assert.equal(r.isNew, false); assert.equal(r.collection[1].rides, 2);
   assert.equal(r.collection[1].first, '2026-11-19'); assert.equal(r.collection[1].last, '2026-11-20');
 });
@@ -66,9 +66,9 @@ test('migrateCollection keeps only ridden entries', () => {
   assert.deepEqual(migrateCollection(null), {});
 });
 test('collectionStats counts characters and boardings', () => {
-  let c = recordBoarded({}, { id: 1, svc: '96' }, 'd').collection;
-  c = recordBoarded(c, { id: 1, svc: '96' }, 'd').collection;
-  c = recordBoarded(c, { id: 2, svc: '15' }, 'd').collection;
+  let c = recordBoarded({}, { id: 1, svc: '96' }, 'd', 0).collection;
+  c = recordBoarded(c, { id: 1, svc: '96' }, 'd', 600000).collection;
+  c = recordBoarded(c, { id: 2, svc: '15' }, 'd', 600000).collection;
   assert.deepEqual(collectionStats(c), { met: 2, rides: 3 });
 });
 test('sceneRadius clamps and ringStep fits two rings', () => {

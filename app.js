@@ -184,10 +184,10 @@ function focusSafeButton(no) {
 }
 
 function confirmBoarding(no, entry) {
-  const { collection, isNew } = recordBoarded(state.collection, { id: entry.id, svc: no }, sgDate());
+  const { collection, isNew, ignored } = recordBoarded(state.collection, { id: entry.id, svc: no }, sgDate());
   if (isNew) state.fresh.add(entry.id);
   state.confirming = null;
-  setCollection(collection);
+  if (!ignored) setCollection(collection);
   rerenderBoard();
   focusSafeButton(no);
 }

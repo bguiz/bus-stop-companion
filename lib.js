@@ -1,5 +1,6 @@
 // Pure helpers, no DOM. Tested in tests/lib.test.mjs.
 import { ARCHETYPES, DIALOGUE } from './dialogue.js';
+import { isRepeatBoarding } from './fixes/double-board.js';
 
 /** Stable 32-bit FNV-1a hash. */
 export function fnv1a(str) {
@@ -98,14 +99,16 @@ export function metersFrom(lat0, lng0, lat, lng) {
 
 /**
  * Add a character to the collection. Only called once the rider has confirmed boarding.
- * Boarding the same character again counts another ride.
+ * Boarding the same character again counts another ride, unless it is within 5 minutes of the last one (double tap).
+ * Returns { collection, isNew, ignored }; when ignored, the collection is returned unchanged.
  */
-export function recordBoarded(collection, { id, svc }, today) {
+export function recordBoarded(collection, { id, svc }, today, nowMs = Date.now()) {
   const prev = collection[id];
   if (!prev) {
-    return { collection: { ...collection, [id]: { svc, first: today, last: today, rides: 1 } }, isNew: true };
+    return { collection: { ...collection, [id]: { svc, first: today, last: today, rides: 1, lastAt: nowMs } }, isNew: true, ignored: false };
   }
-  return { collection: { ...collection, [id]: { ...prev, svc, last: today, rides: prev.rides + 1 } }, isNew: false };
+  if (isRepeatBoarding(prev, nowMs)) return { collection, isNew: false, ignored: true };
+  return { collection: { ...collection, [id]: { ...prev, svc, last: today, rides: prev.rides + 1, lastAt: nowMs } }, isNew: false, ignored: false };
 }
 
 /** Carry over only the earlier entries the owner marked as ridden; "seen" is not "boarded". */
