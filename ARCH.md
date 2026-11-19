@@ -1,6 +1,6 @@
 # Architecture
 
-Bus Stop Companion is a static, client-only web app. It has no build step, no backend and no secrets. The browser loads plain ES modules, reads two bundled JSON files, and calls three public APIs directly (all three allow cross-origin requests). Everything the app remembers lives in `localStorage`.
+Bus stop aibou is a static, client-only web app. It has no build step, no backend and no secrets. The browser loads plain ES modules, reads two bundled JSON files, and calls three public APIs directly (all three allow cross-origin requests). Everything the app remembers lives in `localStorage`.
 
 This document covers how the pieces fit together. For the product reasoning behind them, see [PRD.md](PRD.md).
 
@@ -29,7 +29,7 @@ flowchart LR
   subgraph Offline["One-off, run by hand"]
     Busrouter["data.busrouter.sg<br/>stops.min.json"]
     Build["scripts/build-data.mjs"]
-    Icons["scripts/make-icons.py"]
+    Icons["scripts/make-logo.py"]
   end
   Busrouter --> Build
   Build -- "data/stops.json<br/>data/characters.json (only if missing)" --> Host
@@ -46,7 +46,7 @@ flowchart LR
 
 ## 2. Code layout and module dependencies
 
-Logic that can be tested without a browser lives in pure modules (`lib.js`, `board.js`, `fixes/*`). `app.js` and `scene.js` are the only modules that touch the DOM or canvas.
+Decision logic lives in pure modules (`lib.js`, `board.js`, `fixes/*`). `app.js`, `scene.js` and `talk.js` are the only modules that touch the DOM or canvas; the tests run them in happy-dom (section 11).
 
 ```mermaid
 flowchart TD
@@ -55,6 +55,7 @@ flowchart TD
   App --> Lib["lib.js<br/>hashing, identity, dialogue choice,<br/>weather, collection, search"]
   App --> Board["board.js<br/>draw-first loading,<br/>card reconciliation"]
   App --> Scene["scene.js<br/>canvas radar + weather effects"]
+  App --> Talk["talk.js<br/>double-click speech bubble"]
   App --> Fixes["fixes/*.js<br/>pure helpers, one per bug fix"]
 
   Lib --> Dialogue["dialogue.js<br/>archetypes + line templates"]
@@ -65,24 +66,27 @@ flowchart TD
 
   App -. "fetch at boot" .-> Data[("data/stops.json<br/>data/characters.json")]
 
-  Tests["tests/*.test.mjs<br/>(node --test)"] -.-> Lib
+  Tests["tests/*.test.mjs<br/>(node --test + happy-dom)"] -.-> App
+  Tests -.-> Scene
+  Tests -.-> Talk
+  Tests -.-> Lib
   Tests -.-> Board
   Tests -.-> Fixes
-  Tests -.-> Data
 ```
 
 | File | Role |
 |---|---|
-| `index.html` | Page skeleton: header, landing, picker, tabs, three tab panels, live-region announcer, footer |
+| `index.html` | Page skeleton: header, landing, picker, carousel (`#peek`), tabs, three tab panels, live-region announcer, footer. `body[data-view]` is `home` or `stop` |
 | `style.css` | Mobile-first styles. Weather themes are CSS variables switched by `body[data-weather]` |
 | `app.js` | The only stateful module: boot, routing, polling, network calls, rendering of board, collection, carousel and picker |
 | `lib.js` | Pure core logic (see section 5) |
 | `board.js` | `loadBoard` (arrivals draw first, decoration later), `reconcileKeys`, `avatarNeedsReplacing` |
 | `scene.js` | `createScene(canvas)` returns `{ setData, start, stop }`; owns its own `requestAnimationFrame` loop |
-| `dialogue.js` | `ARCHETYPES` and `DIALOGUE[archetype][situation]` string templates |
+| `talk.js` | `playTalk()`: double-click (or Enter/Space on) a card's picture and it floats out with a speech bubble showing the line in English and Japanese. Blocks the page (`inert`) while it plays |
+| `dialogue.js` | `ARCHETYPES`, and `DIALOGUE` / `DIALOGUE_JA` string templates keyed by archetype then situation, index-aligned |
 | `fixes/*.js` | Small pure helpers extracted while fixing review findings, each with a `tests/p3-*.test.mjs` |
 | `scripts/build-data.mjs` | Regenerates the stop list; creates a starter character pool only if none exists |
-| `scripts/make-icons.py` | Draws the PNG home-screen icons with the Python standard library |
+| `scripts/make-logo.py` | Rebuilds the logo SVG from `scripts/aibou-dots.txt` and renders the PNG icons |
 | `manifest.webmanifest`, `icon.svg`, `icons/` | Installability and icons |
 
 `fixes/favicon.js` is used only by its test (it checks the icon PNG sizes). `fixes/taxi-toggle.js` exports `needsTaxiFetch`, but `app.js` uses its own inline cache check in `getTaxis()`.
@@ -170,9 +174,10 @@ sequenceDiagram
   Note over A: sort by next arrival<br/>assign characters by service number<br/>return the character ids
   B->>A: render(cached chars, last weather)
   Note over A: first draw: bus cards updated in place,<br/>live-region announcements
+  A->>S: setData(buses, cached taxis, weather)
   A->>TX: getTaxis (cached 60 s, shared request)
   TX-->>A: taxi points
-  A->>S: setData(buses, taxis, weather)
+  A->>S: setData(taxis), unless the stop changed or a newer update started
   W-->>B: forecast
   B->>A: render(with fresh weather)
   B->>AL: ensureCharacters(ids not cached)
@@ -182,7 +187,7 @@ sequenceDiagram
   A->>G: end(ticket)
 ```
 
-Every `render` call checks `gate.isCurrent(ticket)`, so a slow response for a stop the user has left is dropped. The ticket is held until decoration has finished, so the late weather and artwork draws are not mistaken for stale ones.
+Every `render` call checks `gate.isCurrent(ticket)`, so a slow response for a stop the user has left is dropped. The ticket is held until decoration has finished, so the late weather and artwork draws are not mistaken for stale ones. The scene does not use the ticket for taxis: the taxi list often arrives after the ticket is released, so `updateScene()` draws the buses at once and uses its own sequence number for the late taxi update.
 
 When the arrivals request fails, `fixes/keep-last-list.js` picks one of two outcomes:
 
@@ -226,7 +231,7 @@ flowchart LR
   Arch --> Lines["DIALOGUE[archetype][situation]"]
   Sit --> Lines
   Lines --> H3["fnv1a('96:' + situation) mod lines"]
-  H3 --> Line["the line on the card"]
+  H3 --> Line["the line on the card<br/>+ the Japanese line at the same index"]
 ```
 
 Consequences of this design:
@@ -283,7 +288,7 @@ flowchart TD
   Kind --> Sky["scene sky + effects<br/>rain, lightning, haze, clouds, sparkles"]
 ```
 
-`themeKind()` keeps the current theme when weather is missing, so a failed refresh never flashes the page back to "fair". Only the first load defaults to fair.
+`themeKind()` keeps the current theme when weather is missing, so a failed refresh never flashes the page back to "fair". Once no forecast younger than 30 minutes is left, the theme returns to fair and the board stops reusing the stop's last weather (`state.weather` records when its forecast was fetched).
 
 ## 7. Collection
 
@@ -347,7 +352,7 @@ All runtime state sits in one `state` object in `app.js`. Everything that must o
 
 | Key | Shape | Written by | Purpose |
 |---|---|---|---|
-| `chars-v1` | `{ [anilistId]: { name, img } }` | `ensureCharacters()` | Character detail cache, keeps AniList traffic well under 30 requests a minute |
+| `chars-v1` | `{ [anilistId]: { name, img } }` | `ensureCharacters()` | Character detail cache, keeps AniList traffic well under 30 requests a minute. New entries are merged into the stored copy at save time, so overlapping fetches do not overwrite each other |
 | `collection-v2` | `{ [anilistId]: { svc, first, last, rides, lastAt } }` | `setCollection()` | Boarded characters |
 | `collection-v1` | legacy | (read once) | Migrated at boot; only entries marked as ridden carry over |
 | `last-stop` | stop code | `selectStop()` | "Back to <stop>" on the home page |
@@ -394,14 +399,28 @@ classDiagram
 
 ## 11. Testing
 
-`npm test` runs `node --test tests/*.test.mjs` with no dependencies. Tests cover the pure modules only (`lib.js`, `board.js`, `fixes/*`) plus checks on the real data files and icons. The DOM code in `app.js` and the canvas code in `scene.js` are not unit tested; that is why each bug fix pulled its decision logic out into a pure helper first.
+`npm test` runs `node --test tests/*.test.mjs`. `npm run coverage` adds Node's built-in coverage and fails below 70% lines, branches or functions; coverage is currently above 99% lines, 94% branches and 98% functions, with every source file loaded. The only dependency is happy-dom (dev-only).
+
+```mermaid
+flowchart LR
+  Pure["lib.test, regressions, p2-*, p3-*, p6-*<br/>pure modules + data files"] --> PureMods["lib.js, board.js,<br/>dialogue.js, fixes/*"]
+  Harness["tests/helpers/browser.mjs<br/>real index.html + app.js in happy-dom<br/>fake fetch, canvas, timers, geolocation"] --> AppTests["app-*.test.mjs<br/>one page per file"]
+  AppTests --> AppMods["app.js, talk.js, scene.js"]
+  SceneT["scene.test, talk-unit.test"] --> AppMods
+  BuildT["build-data-*.test<br/>temp folder, fake fetch"] --> Script["scripts/build-data.mjs"]
+```
+
+Each `app-*.test.mjs` file boots one page and runs its tests in order, because Node counts coverage for only one copy of `app.js` per process.
 
 | Test file | Covers |
 |---|---|
-| `lib.test.mjs` | Hashing, identity, dialogue, weather, collection, scene maths |
-| `regressions.test.mjs` | The three P1 review bugs: stale refresh drawing, `?stop=constructor`, collision-dependent identity |
-| `p2-board.test.mjs`, `p2-misc.test.mjs` | Draw-first loading, in-place card updates, search ranking, history, collection order, open log |
-| `p3-*.test.mjs` | One file per P3 fix in `fixes/` |
+| `lib.test.mjs`, `regressions.test.mjs`, `p2-*`, `p3-*`, `p6-*` | Pure logic, the review fixes, and the data files and icons |
+| `app-stop.test.mjs` | Stop view: arrivals, polling, failures, boarding, tabs, scene, collection, picker, navigation, carousel |
+| `app-home`, `app-degraded`, `app-boot-fail` | Home page and storage migration, failing decoration services and storage, a failed stop list |
+| `app-scene-slow-taxis`, `app-weather-expiry`, `app-character-cache` | Regression tests for the three API fixes |
+| `app-talk`, `app-talk-motion`, `talk-unit` | The double-click speech bubble |
+| `scene.test.mjs` | Canvas drawing for every weather kind and reduced motion |
+| `build-data-new`, `build-data-frozen` | The data script, including never overwriting the character pool |
 
 ## 12. Deployment
 
@@ -409,6 +428,8 @@ Publish the repository folder as-is to any static host. ES modules need the page
 
 ## 13. Known limitations
 
-- The first Scene draw waits for the taxi list, so the Scene tab can stay blank for several seconds on a cold load (PRD section 10).
+- On the home page, the picker's Cancel button stays visible and does nothing (a fix is on the `claude/affectionate-sagan-yujlxg` branch).
+- Home keeps the last stop's weather theme.
+- Character ids that AniList does not return are requested again on every poll.
 - Character artwork is hot-linked from AniList rather than copied into the repo, by design.
 - arrivelah2 is a community proxy. All arrivals calls go through `refresh()` in `app.js`, so swapping it for LTA DataMall means changing `ARRIVALS_API` and `normaliseBuses()`.
