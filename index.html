@@ -11,10 +11,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
-<body data-weather="fair">
+<body data-weather="fair" data-view="home">
   <header class="top">
     <div class="stopline">
-      <button id="home" class="iconbtn" type="button" aria-label="Home" hidden>&#8962;</button>
+      <button id="home" class="iconbtn" type="button" aria-label="Home" hidden><img src="icon.svg" alt="" width="36" height="36"></button>
       <button id="change-stop" class="stopbtn" type="button" aria-label="Change bus stop">
         <span id="stop-name" class="stopname">Pick a bus stop</span>
         <span id="stop-meta" class="stopmeta"></span>
@@ -31,20 +31,24 @@
         <h1>Bus stop aibou <span class="jp" lang="ja">相棒</span></h1>
       </div>
       <p class="tagline">Every Singapore bus hides a character. Pick your stop to meet yours.</p>
-      <div id="carousel" class="carousel" role="region" aria-roledescription="carousel" aria-label="A peek at buses and their characters" tabindex="0">
-        <div id="track" class="track"></div>
-      </div>
-      <div id="dots" class="dots" aria-hidden="true"></div>
-      <p id="recent" class="recent" hidden></p>
     </section>
 
     <section id="picker" class="picker" hidden>
+      <p id="pickbar" class="pickbar">Pick a bus stop</p>
       <label class="sr" for="stop-search">Search bus stops by name, road or code</label>
       <input id="stop-search" type="search" placeholder="Search name, road or stop code" autocomplete="off" enterkeyhint="search">
       <button id="nearest" class="primary" type="button">Use my location</button>
       <button id="picker-cancel" type="button" hidden>Cancel</button>
       <p id="picker-msg" class="msg" role="status"></p>
       <ul id="results" class="results"></ul>
+    </section>
+
+    <section id="peek" class="peek" hidden>
+      <div id="carousel" class="carousel" role="region" aria-roledescription="carousel" aria-label="A peek at buses and their characters" tabindex="0">
+        <div id="track" class="track"></div>
+      </div>
+      <div id="dots" class="dots" aria-hidden="true"></div>
+      <p id="recent" class="recent" hidden></p>
     </section>
 
     <nav id="tabs" class="tabs" role="tablist" aria-label="Views" hidden>

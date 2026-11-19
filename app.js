@@ -1,9 +1,10 @@
 import {
-  assignPoolIndexes, minutesAway, classifyForecast, nearest, pickLine, LOAD_LABEL, sgDate,
+  assignPoolIndexes, minutesAway, classifyForecast, nearest, pickLine, pickLinePair, LOAD_LABEL, sgDate,
   metersFrom, recordBoarded, migrateCollection, collectionStats, findStop, createRefreshGate,
   findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
+import { playTalk } from './talk.js';
 import { sceneNote } from './fixes/plural-note.js';
 import { collectionForPool, selectedEntry } from './fixes/pool-latent.js';
 import { slideStep } from './fixes/carousel-wrap.js';
@@ -255,6 +256,21 @@ function buildCard(no) {
   return card;
 }
 
+// The picture can be double-clicked (or focused and activated with Enter or Space) to hear what the character says.
+function makeTalkable(node, name) {
+  node.tabIndex = 0;
+  node.setAttribute('role', 'button');
+  node.setAttribute('aria-label', `Hear what ${name} says`);
+}
+
+function talkFrom(avatarEl) {
+  if (!avatarEl) return;
+  const card = avatarEl.closest('.card');
+  const line = card && card.querySelector('.line');
+  if (!line || !line.dataset.ja) return;
+  playTalk({ source: avatarEl, en: line.textContent, ja: line.dataset.ja, name: card.querySelector('.char')?.textContent || '', reduceMotion });
+}
+
 function updateAvatar(card, entry, detail) {
   const cur = card.firstElementChild;
   const want = detail && detail.img ? detail.img : undefined;
@@ -274,11 +290,15 @@ function updateCard(card, s, entry, detail, kind) {
   svc.textContent = s.no;
   if (s.operator) svc.append(el('small', '', s.operator));
   who.children[1].textContent = detail ? detail.name : entry.name;
-  const lineText = first ? pickLine(s.no, { mins: first.mins, load: first.load, weather: kind, monitored: first.monitored }) : null;
+  const pair = first ? pickLinePair(s.no, { mins: first.mins, load: first.load, weather: kind, monitored: first.monitored }) : null;
   const line = who.querySelector('.line');
-  if (lineText === null) { if (line) line.remove(); }
-  else if (line) { if (line.textContent !== lineText) line.textContent = lineText; }
-  else who.append(el('p', 'line', lineText));
+  if (!pair) { if (line) line.remove(); }
+  else {
+    const node = line || who.appendChild(el('p', 'line'));
+    if (node.textContent !== pair.en) node.textContent = pair.en;
+    node.dataset.ja = pair.ja; // the Japanese version, shown with the English one when the picture is double-clicked
+  }
+  makeTalkable(card.firstElementChild, detail ? detail.name : entry.name);
 
   eta.textContent = '';
   if (first) {
@@ -581,6 +601,7 @@ function startCarousel() {
 
 function showLanding(on) {
   $('landing').hidden = !on;
+  $('peek').hidden = !on; // the carousel and the "Back to" shortcut live in their own section under the picker
 }
 
 // ---------- stop picker ----------
@@ -611,6 +632,7 @@ function selectStop(code, { push = true } = {}) {
   $('refresh').hidden = false;
   $('home').hidden = false;
   $('tabs').hidden = false;
+  document.body.dataset.view = 'stop';
   showLanding(false);
   showTab(state.tab);
   renderState('Looking for buses…');
@@ -692,6 +714,7 @@ function goHome({ push = true } = {}) {
   $('results').textContent = '';
   $('picker-msg').textContent = '';
   $('picker').hidden = false;
+  document.body.dataset.view = 'home';
   showLanding(true);
 
   const last = store.get('last-stop', null);
@@ -732,6 +755,10 @@ async function init() {
 
   $('change-stop').addEventListener('click', openPicker);
   $('home').addEventListener('click', () => goHome());
+  $('board').addEventListener('dblclick', (e) => talkFrom(e.target.closest('.card .avatar')));
+  $('board').addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.card .avatar')) { e.preventDefault(); talkFrom(e.target); }
+  });
   $('picker-cancel').addEventListener('click', () => closePicker('cancel'));
   $('stop-search').addEventListener('keydown', (e) => { if (e.key === 'Escape') closePicker('escape'); });
   $('refresh').addEventListener('click', () => refresh());
