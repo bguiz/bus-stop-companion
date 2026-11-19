@@ -4,6 +4,7 @@ import {
   findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
+import { slideStep } from './fixes/carousel-wrap.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -493,12 +494,12 @@ function updateDots() {
   [...$('dots').children].forEach((d, n) => d.classList.toggle('on', n === i));
 }
 
-function goToSlide(i) {
+function goToSlide(i, smooth = true) {
   const c = $('carousel');
   const slide = $('track').children[i];
   if (!slide) return;
   const left = slide.offsetLeft - (c.clientWidth - slide.clientWidth) / 2;
-  c.scrollTo({ left: Math.max(0, left), behavior: reduceMotion ? 'auto' : 'smooth' });
+  c.scrollTo({ left: Math.max(0, left), behavior: reduceMotion || !smooth ? 'auto' : 'smooth' });
 }
 
 function startCarousel() {
@@ -507,14 +508,18 @@ function startCarousel() {
   const pause = () => { carouselPausedUntil = Date.now() + 8000; };
   for (const ev of ['pointerdown', 'wheel', 'touchstart', 'focusin']) c.addEventListener(ev, pause, { passive: true });
   c.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight') { pause(); goToSlide((carouselIndex() + 1) % PEEK_SERVICES.length); }
-    if (e.key === 'ArrowLeft') { pause(); goToSlide((carouselIndex() + PEEK_SERVICES.length - 1) % PEEK_SERVICES.length); }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      pause();
+      const step = slideStep(carouselIndex(), PEEK_SERVICES.length, e.key === 'ArrowRight' ? 1 : -1);
+      goToSlide(step.index, step.smooth);
+    }
   });
   if (reduceMotion) return; // no auto-advance for people who asked for less motion
   clearInterval(carouselTimer);
   carouselTimer = setInterval(() => {
     if (document.hidden || $('landing').hidden || Date.now() < carouselPausedUntil) return;
-    goToSlide((carouselIndex() + 1) % PEEK_SERVICES.length);
+    const step = slideStep(carouselIndex(), PEEK_SERVICES.length, 1);
+    goToSlide(step.index, step.smooth);
   }, 3500);
 }
 
