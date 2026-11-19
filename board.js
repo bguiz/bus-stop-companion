@@ -42,3 +42,8 @@ export function reconcileKeys(prevKeys, nextKeys) {
     order: [...nextKeys],
   };
 }
+
+/** Should a card's picture be replaced? DOM dataset values are strings, so ids are compared as strings. */
+export function avatarNeedsReplacing({ cardEntry, entryId, have, want }) {
+  return !(cardEntry !== undefined && String(cardEntry) === String(entryId) && have === want);
+}

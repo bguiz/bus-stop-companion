@@ -106,3 +106,19 @@ test('reconcileKeys: first poll adds everything', () => {
   const r = reconcileKeys([], ['1', '2']);
   assert.deepEqual(r, { keep: [], add: ['1', '2'], remove: [], order: ['1', '2'] });
 });
+
+// Found while integrating: DOM dataset values are strings, so a numeric entry id never matched and the
+// picture was reloaded on every poll.
+import { avatarNeedsReplacing } from '../board.js';
+test('a card keeps its picture when the character id is the same (dataset string vs numeric id)', () => {
+  assert.equal(avatarNeedsReplacing({ cardEntry: '42', entryId: 42, have: 'a.jpg', want: 'a.jpg' }), false);
+});
+test('a card replaces its picture when the character changes', () => {
+  assert.equal(avatarNeedsReplacing({ cardEntry: '42', entryId: 43, have: 'a.jpg', want: 'a.jpg' }), true);
+});
+test('a card replaces its picture when the image URL changes', () => {
+  assert.equal(avatarNeedsReplacing({ cardEntry: '42', entryId: 42, have: undefined, want: 'a.jpg' }), true);
+});
+test('a brand new card gets a picture', () => {
+  assert.equal(avatarNeedsReplacing({ cardEntry: undefined, entryId: 42, have: undefined, want: undefined }), true);
+});

@@ -16,6 +16,7 @@ npm test        # unit tests for lib.js
 - `index.html`, `style.css`, `app.js`: the page and its UI logic
 - `lib.js`: pure logic (hashing, character assignment, weather, dialogue, collection, scene maths)
 - `scene.js`: the living-scene canvas (Stage 3)
+- `board.js`: pure helpers for drawing the bus list (draw-first loading, in-place card updates)
 - `dialogue.js`: static dialogue templates per archetype
 - `data/stops.json`: bundled bus-stop list (generated)
 - `data/characters.json`: the **frozen** character pool (AniList IDs), curated 2026-11-19 from the top-favourited non-adult characters minus dark/violent series (Berserk, Chainsaw Man, Tokyo Ghoul, Vinland Saga, Monster, Death Note, Attack on Titan Final Season, Cyberpunk: Edgerunners). Changing it changes which character each bus number gets, so leave it alone once you've started using the app

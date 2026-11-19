@@ -4,7 +4,7 @@ import {
   findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
-import { loadBoard, reconcileKeys } from './board.js';
+import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
 const FORECAST_API = 'https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast';
@@ -234,8 +234,8 @@ function updateAvatar(card, entry, detail) {
   const cur = card.firstElementChild;
   const want = detail && detail.img ? detail.img : undefined;
   const have = cur.dataset.url ?? cur.dataset.failedUrl;
-  if (card.dataset.entry === entry.id && have === want) return; // same picture: leave it loaded
-  card.dataset.entry = entry.id;
+  if (!avatarNeedsReplacing({ cardEntry: card.dataset.entry, entryId: entry.id, have, want })) return; // same picture: leave it loaded
+  card.dataset.entry = String(entry.id);
   cur.replaceWith(avatar(detail, entry.name));
 }
 
@@ -277,8 +277,9 @@ function updateCard(card, s, entry, detail, kind) {
   if (first && first.type === 'BD') info.push(el('span', 'tag', 'Bendy'));
   if (first && !first.monitored) info.push(el('span', 'tag', 'No live GPS yet'));
   if (ctl && ctl.dataset.mode !== controlMode(s.no, entry)) { ctl.remove(); ctl = null; }
-  if (!ctl) ctl = boardControl(s.no, entry);
-  tags.append(...info, ctl);
+  // Never re-append an existing control: moving a node in the DOM drops keyboard focus.
+  if (ctl) ctl.before(...info);
+  else tags.append(...info, boardControl(s.no, entry));
 }
 
 // Idempotent: updates cards in place, keyed by service number, so focus, images and animations survive polls.
