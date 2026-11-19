@@ -4,6 +4,7 @@ import {
   findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
+import { announcements, nextTab } from './fixes/a11y.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -370,6 +371,8 @@ async function refresh() {
       render: ({ weather, chars }) => {
         showWeather(weather);
         const latest = { ...picked, weather, chars, stop };
+        const said = announcements(state.latest?.services, latest.services);
+        if (said.length) $('announcer').textContent = said.join('. ');
         state.latest = latest;
         renderServices(latest);
         updateScene(latest, ticket, code).catch(() => {});
@@ -439,7 +442,10 @@ function renderCollection() {
 // ---------- tabs ----------
 function showTab(name) {
   state.tab = name;
-  for (const btn of document.querySelectorAll('#tabs button')) btn.setAttribute('aria-selected', String(btn.dataset.tab === name));
+  for (const btn of document.querySelectorAll('#tabs button')) {
+    btn.setAttribute('aria-selected', String(btn.dataset.tab === name));
+    btn.tabIndex = btn.dataset.tab === name ? 0 : -1;
+  }
   $('board').hidden = name !== 'board';
   $('scene').hidden = name !== 'scene';
   $('collection').hidden = name !== 'collection';
@@ -672,7 +678,17 @@ async function init() {
   $('refresh').addEventListener('click', () => refresh());
   $('nearest').addEventListener('click', findNearest);
   $('stop-search').addEventListener('input', (e) => searchStops(e.target.value));
-  for (const btn of document.querySelectorAll('#tabs button')) btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  for (const btn of document.querySelectorAll('#tabs button')) {
+    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+    btn.addEventListener('keydown', (e) => {
+      const order = [...document.querySelectorAll('#tabs button')].map((b) => b.dataset.tab);
+      const to = nextTab(e.key, btn.dataset.tab, order);
+      if (!to) return;
+      e.preventDefault();
+      showTab(to);
+      document.getElementById(`tab-${to}`).focus();
+    });
+  }
   $('taxi-toggle').addEventListener('change', (e) => {
     state.showTaxis = e.target.checked;
     store.set('taxi-spirits', state.showTaxis);

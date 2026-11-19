@@ -40,14 +40,14 @@
     </section>
 
     <nav id="tabs" class="tabs" role="tablist" aria-label="Views" hidden>
-      <button type="button" role="tab" data-tab="board" aria-selected="true">Buses</button>
-      <button type="button" role="tab" data-tab="scene" aria-selected="false">Scene</button>
-      <button type="button" role="tab" data-tab="collection" aria-selected="false">Collection</button>
+      <button type="button" role="tab" id="tab-board" data-tab="board" aria-controls="board" aria-selected="true" tabindex="0">Buses</button>
+      <button type="button" role="tab" id="tab-scene" data-tab="scene" aria-controls="scene" aria-selected="false" tabindex="-1">Scene</button>
+      <button type="button" role="tab" id="tab-collection" data-tab="collection" aria-controls="collection" aria-selected="false" tabindex="-1">Collection</button>
     </nav>
 
-    <section id="board" class="board" aria-live="polite"></section>
+    <section id="board" class="board" role="tabpanel" aria-labelledby="tab-board"></section>
 
-    <section id="scene" class="scenebox" hidden>
+    <section id="scene" class="scenebox" role="tabpanel" aria-labelledby="tab-scene" hidden>
       <canvas id="scene-canvas" role="img" aria-label="Map of buses near your stop, drawn as their characters"></canvas>
       <div class="scenebar">
         <label><input id="taxi-toggle" type="checkbox" checked> Taxi spirits</label>
@@ -55,12 +55,14 @@
       </div>
     </section>
 
-    <section id="collection" class="collection" hidden>
+    <section id="collection" class="collection" role="tabpanel" aria-labelledby="tab-collection" hidden>
       <p id="collection-stats" class="msg"></p>
       <div id="collection-grid" class="grid"></div>
       <div id="collection-detail" class="detail" hidden></div>
     </section>
   </main>
+
+  <p id="announcer" class="sr" role="status" aria-live="polite"></p>
 
   <footer class="foot">
     <p id="open-days"></p>
