@@ -80,19 +80,24 @@ async function fetchJson(url, options, timeoutMs = 10000) {
 async function ensureCharacters(ids) {
   const cache = store.get('chars-v1', {});
   const missing = [...new Set(ids)].filter((id) => !cache[id]);
-  if (missing.length) {
-    try {
-      const query = `query($ids:[Int]){Page(perPage:50){characters(id_in:$ids){id name{full} image{large}}}}`;
-      const json = await fetchJson(ANILIST_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ query, variables: { ids: missing } }),
-      });
-      for (const c of json.data.Page.characters) cache[c.id] = { name: c.name.full, img: c.image.large };
-      store.set('chars-v1', cache);
-    } catch { /* fall back to names from the repo snapshot */ }
+  if (!missing.length) return cache;
+  try {
+    const query = `query($ids:[Int]){Page(perPage:50){characters(id_in:$ids){id name{full} image{large}}}}`;
+    const json = await fetchJson(ANILIST_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ query, variables: { ids: missing } }),
+    });
+    const found = {};
+    for (const c of json.data.Page.characters) found[c.id] = { name: c.name.full, img: c.image.large };
+    // Merge into what is stored now, not the copy read before the request: another fetch
+    // (the home carousel and a stop's board can overlap) may have saved characters meanwhile.
+    const merged = { ...store.get('chars-v1', {}), ...found };
+    store.set('chars-v1', merged);
+    return merged;
+  } catch {
+    return store.get('chars-v1', cache); // fall back to names from the repo snapshot
   }
-  return cache;
 }
 
 function avatar(detail, fallbackName, cls = 'avatar') {
