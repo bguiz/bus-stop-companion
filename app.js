@@ -9,6 +9,7 @@ import { collectionForPool, selectedEntry } from './fixes/pool-latent.js';
 import { slideStep } from './fixes/carousel-wrap.js';
 import { pickerState } from './fixes/picker-close.js';
 import { announcements, nextTab } from './fixes/a11y.js';
+import { failureMode, staleLabel } from './fixes/keep-last-list.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -163,7 +164,14 @@ function normaliseBuses(service) {
     }));
 }
 
+function setBoardStatus(text) {
+  const st = $('board-status');
+  st.textContent = text || '';
+  st.hidden = !text;
+}
+
 function renderState(message, withRetry) {
+  setBoardStatus('');
   const board = $('board');
   board.textContent = '';
   const box = el('div', 'state', message);
@@ -361,6 +369,7 @@ async function refresh() {
       prepare: (arrivals) => {
         const services = (arrivals.services || []).filter((s) => s.next || s.subsequent);
         if (!services.length) {
+          state.latest = null;
           renderState('No buses right now. Service may have ended for tonight, or nothing is due here yet.', true);
           state.scene.setData({ stopKey: code, stopName: stopLabel(code).name, buses: [], taxis: [], kind: document.body.dataset.weather });
           $('scene-note').textContent = 'No buses due';
@@ -378,12 +387,17 @@ async function refresh() {
         const said = announcements(state.latest?.services, latest.services);
         if (said.length) $('announcer').textContent = said.join('. ');
         state.latest = latest;
+        state.latestAt = Date.now();
+        state.latestCode = code;
+        setBoardStatus('');
         renderServices(latest);
         updateScene(latest, ticket, code).catch(() => {});
       },
     }));
   } catch {
-    if (isCurrent()) {
+    if (isCurrent() && failureMode({ hasList: !!state.latest, sameStop: state.latestCode === code }) === 'keep-list') {
+      setBoardStatus(staleLabel(Date.now() - state.latestAt));
+    } else if (isCurrent()) {
       renderState(navigator.onLine === false
         ? 'You look offline. Reconnect and try again.'
         : 'Could not reach the bus times service. It is a free community service and may be busy.', true);
@@ -642,6 +656,7 @@ function goHome({ push = true } = {}) {
   $('home').hidden = true;
   $('tabs').hidden = true;
   $('board').textContent = '';
+  setBoardStatus('');
   for (const id of ['board', 'scene', 'collection']) $(id).hidden = true;
   showWeather(null);
 
