@@ -97,7 +97,7 @@ input[type="search"] {
 .foot p { margin: 6px 0; }
 
 @media (prefers-reduced-motion: no-preference) {
-  .card { animation: rise 0.25s ease-out both; }
+  .card.enter { animation: rise 0.25s ease-out both; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
 
