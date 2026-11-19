@@ -1,10 +1,14 @@
 {
-  "name": "bus-stop-companion",
+  "name": "bus-stop-aibou",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-exclude='tests/**' --test-coverage-exclude='node_modules/**' --test-coverage-lines=70 --test-coverage-branches=70 --test-coverage-functions=70 tests/*.test.mjs",
     "data": "node scripts/build-data.mjs",
     "serve": "python3 -m http.server 8765"
+  },
+  "devDependencies": {
+    "happy-dom": "21.0.4"
   }
 }

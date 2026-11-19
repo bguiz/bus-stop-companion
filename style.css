@@ -89,8 +89,8 @@ input[type="search"] {
 .eta .big { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--accent); }
 .eta .unit { font-size: 0.75rem; color: var(--muted); }
 .eta .then { margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; grid-column: 2 / -1; }
-.tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--card-border); color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; grid-column: 2 / -1; }
+.tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; font-size: 0.75rem; line-height: 1; border-radius: 999px; border: 1px solid var(--card-border); color: var(--muted); }
 .tag.SEA { color: var(--good); } .tag.SDA { color: var(--warn); } .tag.LSD { color: var(--bad); }
 
 .foot { color: var(--muted); font-size: 0.78rem; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
@@ -103,8 +103,11 @@ input[type="search"] {
 
 /* ---------- landing + carousel ---------- */
 .landing { margin-bottom: 18px; }
-.landing[hidden], .scenebox[hidden], .collection[hidden], .tabs[hidden], .detail[hidden], .board[hidden] { display: none; }
-.landing h1 { margin: 6px 0 4px; font-size: 1.6rem; }
+.landing[hidden], .peek[hidden], .scenebox[hidden], .collection[hidden], .tabs[hidden], .detail[hidden], .board[hidden] { display: none; }
+.landing .brand { display: flex; align-items: center; gap: 14px; margin: 6px 0 8px; }
+.landing .logo { flex: none; width: 64px; height: 64px; border-radius: 18px; }
+.landing h1 { margin: 0; font-size: 1.6rem; }
+.landing h1 .jp { margin-left: 0.35em; font-size: 0.75em; font-weight: 500; color: var(--accent); font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif; }
 .tagline { margin: 0 0 14px; color: var(--muted); }
 .carousel { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--radius); -webkit-overflow-scrolling: touch; }
 .carousel::-webkit-scrollbar { display: none; }
@@ -162,3 +165,26 @@ input[type="search"] {
 .recent { margin: 12px 0 0; text-align: center; }
 .recent[hidden] { display: none; }
 .iconbtn[hidden] { display: none; }
+
+/* ---------- home page: the top bar's text moves into the picker; the carousel sits under the buttons ---------- */
+body[data-view="home"] .top { display: none; }
+.pickbar { margin: 0; padding: 10px 14px; font-weight: 700; font-size: 1.15rem; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); }
+.peek { margin-bottom: 18px; }
+
+/* ---------- home button shows the logo ---------- */
+#home { display: grid; place-items: center; padding: 0; }
+#home img { display: block; width: 36px; height: 36px; border-radius: 10px; }
+
+/* ---------- double-click a character: lift, pulse, speech bubble ---------- */
+.card .avatar { cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.card.lifted .avatar { visibility: hidden; }
+.talk-backdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(7, 9, 15, 0.62); overscroll-behavior: contain; touch-action: none; outline: none; }
+.talk-pic { position: fixed; z-index: 1001; border-radius: 16px; object-fit: cover; object-position: top; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; font-size: 3rem; color: var(--muted); will-change: transform; }
+.talk-bubble { position: fixed; z-index: 1002; width: min(86vw, 320px); padding: 12px 16px; border-radius: 18px; background: #ffffff; color: #14203b; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.talk-bubble::after { content: ""; position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); border: 10px solid transparent; border-top-color: #ffffff; border-bottom: 0; }
+.talk-bubble .en { margin: 0; font-weight: 700; font-size: 1rem; line-height: 1.35; }
+.talk-bubble .ja { margin: 6px 0 0; font-size: 0.95rem; line-height: 1.4; color: #3a4768; font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif; }
+
+/* empty message and results take no room (the message stays in the accessibility tree so it can still announce) */
+.picker .msg:empty { position: absolute; width: 1px; height: 1px; min-height: 0; overflow: hidden; clip: rect(0 0 0 0); }
+.picker .results:empty { display: none; }

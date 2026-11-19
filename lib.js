@@ -1,5 +1,5 @@
 // Pure helpers, no DOM. Tested in tests/lib.test.mjs.
-import { ARCHETYPES, DIALOGUE } from './dialogue.js';
+import { ARCHETYPES, DIALOGUE, DIALOGUE_JA } from './dialogue.js';
 import { isRepeatBoarding } from './fixes/double-board.js';
 
 /** Stable 32-bit FNV-1a hash. */
@@ -74,6 +74,15 @@ export function situationKey({ mins, load, weather, monitored }) {
 export function pickLine(serviceNo, ctx) {
   const lines = DIALOGUE[archetypeFor(serviceNo)][situationKey(ctx)];
   return lines[fnv1a(serviceNo + ':' + situationKey(ctx)) % lines.length];
+}
+
+/** The card's line and its Japanese version, picked with the same index so the two always match. */
+export function pickLinePair(serviceNo, ctx) {
+  const arch = archetypeFor(serviceNo);
+  const key = situationKey(ctx);
+  const lines = DIALOGUE[arch][key];
+  const i = fnv1a(serviceNo + ':' + key) % lines.length;
+  return { en: lines[i], ja: DIALOGUE_JA[arch][key][i] };
 }
 
 export const LOAD_LABEL = { SEA: 'Seats available', SDA: 'Standing available', LSD: 'Limited standing' };
