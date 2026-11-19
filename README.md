@@ -8,7 +8,9 @@ Static site: no build step, no server, no keys.
 
 ```bash
 npm run serve   # http://localhost:8765 (any static server works; ES modules need http, not file://)
-npm test        # unit tests for lib.js
+npm install     # once: installs happy-dom, used only by the tests
+npm test        # all tests
+npm run coverage  # tests with a coverage report; fails below 70% lines, branches or functions
 ```
 
 ## Files
@@ -18,6 +20,7 @@ npm test        # unit tests for lib.js
 - `scene.js`: the living-scene canvas (Stage 3)
 - `board.js`: pure helpers for drawing the bus list (draw-first loading, in-place card updates)
 - `fixes/`: small pure helpers behind individual bug fixes, each with a matching `tests/p3-*.test.mjs`
+- `tests/`: `node --test` suites. `tests/helpers/browser.mjs` runs the real `index.html` and `app.js` in happy-dom with the network faked; each `app-*.test.mjs` file boots one page, because Node counts coverage for only one copy of `app.js` per process
 - `icon.svg`, `icons/`, `manifest.webmanifest`: favicon, home screen icons and web manifest (`scripts/make-icons.py` regenerates the PNGs)
 - `dialogue.js`: static dialogue templates per archetype
 - `data/stops.json`: bundled bus-stop list (generated)
