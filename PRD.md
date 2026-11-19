@@ -57,7 +57,7 @@ Audience: the builder (solo, for fun). Product-thinking lessons used for referen
 
 Every stage leaves the owner with something usable.
 
-### Stage 1: skateboard (build first)
+### Stage 1: skateboard (built)
 One static page. Pick a stop, then each arriving bus is shown as a character with weather-aware and crowd-aware dialogue.
 
 Functional requirements:
@@ -80,10 +80,10 @@ Non-functional requirements:
 
 Done when: the owner can open the page on their phone at a real stop and see characters for the arriving buses, and the page survives an API failure.
 
-### Stage 2: collection
+### Stage 2: collection (built)
 Save characters for the bus numbers the owner has seen or ridden (browser storage). A simple collection view.
 
-### Stage 3: living scene
+### Stage 3: living scene (built)
 Stylised map/scene with buses moving in real time from GPS, weather-reactive visuals, optional taxi-availability spirits from the data.gov.sg taxi API.
 
 ## 7. Data sources
@@ -107,3 +107,11 @@ The string `1gMzjPkcteDQXw98TiP1lmvuzr3iwOQ8ztXpV2FWY` could not be decoded and 
 - Is dialogue static templates only, or later LLM-generated? Default: static templates in v1.
 - Stop-list refresh process. Default: one-off generated file, updated by hand if stops change.
 - Revisit the Five Whys after the one-week test; if the test fails, check Market risk and the Confirmation evidence first.
+
+## 10. Build notes (added after Stages 2 and 3 were built)
+
+- Stages 2 and 3 were built before the week-1 test result, at the owner's request. The decision rule in section 2 still applies to what comes next: judge the experience by the open-day log before adding more.
+- **Landing carousel (owner request):** with no stop chosen, the landing page shows a carousel of 12 well-known bus services, each with its character and a sample line. It auto-advances, pauses on touch, and does not auto-advance for people who prefer reduced motion.
+- **Collection:** a character is recorded when its bus appears at a stop you view; a "Riding this" toggle marks it ridden. Stored in the browser only (`collection-v1`).
+- **Scene:** a canvas radar around the stop. Buses with live GPS appear as their characters at real positions and glide between updates; weather changes the sky and adds rain, lightning, haze, clouds or sparkles; nearby taxis from the data.gov.sg taxi API drift as "spirits" (toggleable). Terminals often have no GPS yet, so few buses are placed there.
+

@@ -47,3 +47,31 @@ test('logOpen is one entry per day', () => {
   assert.deepEqual(logOpen(['2026-11-19'], '2026-11-19'), ['2026-11-19']);
   assert.match(sgDate(), /^\d{4}-\d{2}-\d{2}$/);
 });
+
+import { metersFrom, recordSeen, toggleRode, collectionStats, sceneRadius, ringStep } from '../lib.js';
+
+test('metersFrom: north and east offsets', () => {
+  const n = metersFrom(1.3, 103.8, 1.301, 103.8);
+  assert.ok(Math.abs(n.y - 111.2) < 1 && Math.abs(n.x) < 0.001);
+  const e = metersFrom(1.3, 103.8, 1.3, 103.801);
+  assert.ok(Math.abs(e.x - 111.2 * Math.cos(1.3 * Math.PI / 180)) < 1 && Math.abs(e.y) < 0.001);
+});
+test('recordSeen: new ids are fresh, repeat days increment once per day', () => {
+  let r = recordSeen({}, [{ id: 1, svc: '96' }, { id: 2, svc: '15' }], '2026-11-19');
+  assert.deepEqual(r.fresh, [1, 2]);
+  r = recordSeen(r.collection, [{ id: 1, svc: '96' }], '2026-11-19');
+  assert.deepEqual(r.fresh, []); assert.equal(r.collection[1].days, 1);
+  r = recordSeen(r.collection, [{ id: 1, svc: '96' }], '2026-11-20');
+  assert.equal(r.collection[1].days, 2); assert.equal(r.collection[1].first, '2026-11-19');
+});
+test('toggleRode and stats', () => {
+  let c = recordSeen({}, [{ id: 1, svc: '96' }], '2026-11-19').collection;
+  c = toggleRode(c, 1);
+  assert.deepEqual(collectionStats(c), { met: 1, rode: 1 });
+  assert.deepEqual(toggleRode(c, 999), c);
+  assert.deepEqual(collectionStats(toggleRode(c, 1)), { met: 1, rode: 0 });
+});
+test('sceneRadius clamps and ringStep fits two rings', () => {
+  assert.equal(sceneRadius([]), 800); assert.equal(sceneRadius([100]), 600); assert.equal(sceneRadius([9000]), 3000);
+  assert.equal(ringStep(3000), 1000); assert.equal(ringStep(600), 200); assert.equal(ringStep(150), 100);
+});

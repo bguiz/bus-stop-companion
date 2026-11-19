@@ -99,3 +99,55 @@ input[type="search"] {
   .card { animation: rise 0.25s ease-out both; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
+
+/* ---------- landing + carousel ---------- */
+.landing { margin-bottom: 18px; }
+.landing[hidden], .scenebox[hidden], .collection[hidden], .tabs[hidden], .detail[hidden], .board[hidden] { display: none; }
+.landing h1 { margin: 6px 0 4px; font-size: 1.6rem; }
+.tagline { margin: 0 0 14px; color: var(--muted); }
+.carousel { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--radius); -webkit-overflow-scrolling: touch; }
+.carousel::-webkit-scrollbar { display: none; }
+.track { display: flex; gap: 12px; }
+.slide {
+  flex: 0 0 82%; max-width: 320px; scroll-snap-align: center; display: grid; grid-template-columns: 84px 1fr; gap: 12px;
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 12px;
+}
+.slide .avatar { width: 84px; height: 112px; }
+.slide .svc { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--accent); }
+.slide .char { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+.slide .line { margin: 8px 0 0; padding: 8px 10px; border-radius: 12px 12px 12px 4px; background: rgba(0,0,0,0.3); font-size: 0.9rem; }
+.dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--card-border); transition: background 0.2s, transform 0.2s; }
+.dots i.on { background: var(--accent); transform: scale(1.3); }
+
+/* ---------- tabs ---------- */
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+.tabs button {
+  font: inherit; font-weight: 600; padding: 10px 6px; cursor: pointer; color: var(--muted);
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
+}
+.tabs button[aria-selected="true"] { color: #1a1306; background: var(--accent); border-color: var(--accent); }
+
+/* ---------- scene ---------- */
+.scenebox canvas { display: block; width: 100%; height: min(72vh, 520px); border-radius: var(--radius); border: 1px solid var(--card-border); touch-action: pan-y; }
+.scenebar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; }
+.scenebar label { color: var(--muted); font-size: 0.9rem; }
+
+/* ---------- collection + ride button ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.cell {
+  position: relative; padding: 0; cursor: pointer; overflow: hidden; aspect-ratio: 3 / 4; color: inherit; font: inherit;
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
+}
+.cell img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.cell .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 4px 4px; font-size: 0.68rem; text-align: center; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
+.cell.locked { cursor: default; display: grid; place-items: center; font-size: 1.6rem; color: var(--card-border); }
+.cell.ridden::after { content: "\2713"; position: absolute; top: 4px; right: 6px; color: var(--good); font-weight: 800; }
+.cell[aria-pressed="true"] { outline: 3px solid var(--accent); }
+.detail { margin-top: 12px; padding: 12px; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); }
+.detail h2 { margin: 0 0 4px; font-size: 1.1rem; }
+.detail p { margin: 2px 0 10px; color: var(--muted); font-size: 0.9rem; }
+.ride { font: inherit; font-size: 0.75rem; padding: 2px 10px; border-radius: 999px; cursor: pointer; color: var(--muted); background: transparent; border: 1px solid var(--card-border); }
+.ride[aria-pressed="true"] { color: #0e2a1a; background: var(--good); border-color: var(--good); }
+.tag.new { color: #1a1306; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.cellimg { width: 100%; height: 100%; object-fit: cover; object-position: top; display: grid; place-items: center; font-size: 1.6rem; color: var(--muted); }

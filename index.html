@@ -20,6 +20,15 @@
   </header>
 
   <main>
+    <section id="landing" class="landing" hidden>
+      <h1>Bus Stop Companion</h1>
+      <p class="tagline">Every Singapore bus hides a character. Pick your stop to meet yours.</p>
+      <div id="carousel" class="carousel" role="region" aria-roledescription="carousel" aria-label="A peek at buses and their characters" tabindex="0">
+        <div id="track" class="track"></div>
+      </div>
+      <div id="dots" class="dots" aria-hidden="true"></div>
+    </section>
+
     <section id="picker" class="picker" hidden>
       <label class="sr" for="stop-search">Search bus stops by name, road or code</label>
       <input id="stop-search" type="search" placeholder="Search name, road or stop code" autocomplete="off" enterkeyhint="search">
@@ -28,12 +37,32 @@
       <ul id="results" class="results"></ul>
     </section>
 
+    <nav id="tabs" class="tabs" role="tablist" aria-label="Views" hidden>
+      <button type="button" role="tab" data-tab="board" aria-selected="true">Buses</button>
+      <button type="button" role="tab" data-tab="scene" aria-selected="false">Scene</button>
+      <button type="button" role="tab" data-tab="collection" aria-selected="false">Collection</button>
+    </nav>
+
     <section id="board" class="board" aria-live="polite"></section>
+
+    <section id="scene" class="scenebox" hidden>
+      <canvas id="scene-canvas" role="img" aria-label="Map of buses near your stop, drawn as their characters"></canvas>
+      <div class="scenebar">
+        <label><input id="taxi-toggle" type="checkbox" checked> Taxi spirits</label>
+        <span id="scene-note" class="msg"></span>
+      </div>
+    </section>
+
+    <section id="collection" class="collection" hidden>
+      <p id="collection-stats" class="msg"></p>
+      <div id="collection-grid" class="grid"></div>
+      <div id="collection-detail" class="detail" hidden></div>
+    </section>
   </main>
 
   <footer class="foot">
     <p id="open-days"></p>
-    <p>Bus times: <a href="https://github.com/cheeaun/arrivelah">arrivelah</a> (LTA data). Weather: <a href="https://data.gov.sg">data.gov.sg</a>. Characters and artwork: <a href="https://anilist.co">AniList</a>, owned by their rights holders. A fan-made toy, not affiliated with any of them.</p>
+    <p>Bus times: <a href="https://github.com/cheeaun/arrivelah">arrivelah</a> (LTA data). Weather and taxis: <a href="https://data.gov.sg">data.gov.sg</a>. Characters and artwork: <a href="https://anilist.co">AniList</a>, owned by their rights holders. A fan-made toy, not affiliated with any of them.</p>
   </footer>
 
   <script type="module" src="app.js"></script>

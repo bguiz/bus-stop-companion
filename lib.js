@@ -94,3 +94,54 @@ export function sgDate(now = new Date()) {
 export function logOpen(days, today) {
   return days.includes(today) ? days : [...days, today].sort();
 }
+
+// ---------- Stage 2: collection ----------
+
+/** East/north offset in metres of (lat, lng) from the origin point. */
+export function metersFrom(lat0, lng0, lat, lng) {
+  const R = 6371000;
+  const rad = Math.PI / 180;
+  return { x: (lng - lng0) * rad * R * Math.cos(lat0 * rad), y: (lat - lat0) * rad * R };
+}
+
+/**
+ * Record characters seen today. `days` counts distinct days seen, not refreshes.
+ * Returns the new collection and the ids discovered for the first time.
+ */
+export function recordSeen(collection, entries, today) {
+  const next = { ...collection };
+  const fresh = [];
+  for (const { id, svc } of entries) {
+    const prev = next[id];
+    if (!prev) {
+      next[id] = { svc, first: today, last: today, days: 1, rode: false };
+      fresh.push(id);
+    } else if (prev.last !== today) {
+      next[id] = { ...prev, last: today, days: prev.days + 1 };
+    }
+  }
+  return { collection: next, fresh };
+}
+
+export function toggleRode(collection, id) {
+  if (!collection[id]) return collection;
+  return { ...collection, [id]: { ...collection[id], rode: !collection[id].rode } };
+}
+
+export function collectionStats(collection) {
+  const ids = Object.keys(collection);
+  return { met: ids.length, rode: ids.filter((id) => collection[id].rode).length };
+}
+
+// ---------- Stage 3: scene ----------
+
+/** Scene radius in metres from the distances of the buses we can place. */
+export function sceneRadius(distances) {
+  if (!distances.length) return 800;
+  return Math.min(3000, Math.max(600, Math.max(...distances) * 1.2));
+}
+
+/** Distance between rings, chosen so at least two rings fit. */
+export function ringStep(radius) {
+  return [2000, 1000, 500, 200, 100].find((s) => radius / s >= 2) ?? 100;
+}
