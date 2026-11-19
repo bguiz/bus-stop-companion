@@ -16,7 +16,7 @@ test('index.html head links icon, apple-touch-icon, manifest, theme-color (relat
 });
 
 test('referenced files exist', () => {
-  for (const f of ['icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'manifest.webmanifest', 'scripts/make-icons.py']) {
+  for (const f of ['icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'manifest.webmanifest', 'scripts/make-logo.py']) {
     assert.ok(existsSync(p(f)), f);
   }
 });
@@ -38,8 +38,8 @@ test('readPngSize rejects non-PNG', () => {
 
 test('manifest is valid with required fields and existing icons', () => {
   const m = JSON.parse(readFileSync(p('manifest.webmanifest'), 'utf8'));
-  assert.equal(m.name, 'Bus Stop Companion');
-  assert.equal(m.short_name, 'Bus Stop');
+  assert.equal(m.name, 'Bus stop aibou');
+  assert.equal(m.short_name, 'Aibou');
   assert.equal(m.start_url, './');
   assert.equal(m.scope, './');
   assert.equal(m.display, 'standalone');

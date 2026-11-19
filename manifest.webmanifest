@@ -1,6 +1,6 @@
 {
-  "name": "Bus Stop Companion",
-  "short_name": "Bus Stop",
+  "name": "Bus stop aibou",
+  "short_name": "Aibou",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

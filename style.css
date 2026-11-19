@@ -104,7 +104,10 @@ input[type="search"] {
 /* ---------- landing + carousel ---------- */
 .landing { margin-bottom: 18px; }
 .landing[hidden], .scenebox[hidden], .collection[hidden], .tabs[hidden], .detail[hidden], .board[hidden] { display: none; }
-.landing h1 { margin: 6px 0 4px; font-size: 1.6rem; }
+.landing .brand { display: flex; align-items: center; gap: 14px; margin: 6px 0 8px; }
+.landing .logo { flex: none; width: 64px; height: 64px; border-radius: 18px; }
+.landing h1 { margin: 0; font-size: 1.6rem; }
+.landing h1 .jp { margin-left: 0.35em; font-size: 0.75em; font-weight: 500; color: var(--accent); font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif; }
 .tagline { margin: 0 0 14px; color: var(--muted); }
 .carousel { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: var(--radius); -webkit-overflow-scrolling: touch; }
 .carousel::-webkit-scrollbar { display: none; }
