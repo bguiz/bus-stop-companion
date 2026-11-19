@@ -1,4 +1,4 @@
-# Bus Stop Companion
+# Bus stop aibou 相棒
 
 Live Singapore bus arrivals where every bus service is secretly an anime character. Stages 1 to 3 of [PRD.md](PRD.md): live arrivals with characters, a collection, and a living scene.
 

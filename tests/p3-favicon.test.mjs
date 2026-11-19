@@ -38,8 +38,8 @@ test('readPngSize rejects non-PNG', () => {
 
 test('manifest is valid with required fields and existing icons', () => {
   const m = JSON.parse(readFileSync(p('manifest.webmanifest'), 'utf8'));
-  assert.equal(m.name, 'Bus Stop Companion');
-  assert.equal(m.short_name, 'Bus Stop');
+  assert.equal(m.name, 'Bus stop aibou');
+  assert.equal(m.short_name, 'Aibou');
   assert.equal(m.start_url, './');
   assert.equal(m.scope, './');
   assert.equal(m.display, 'standalone');
