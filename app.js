@@ -1,6 +1,6 @@
 import {
   assignPoolIndexes, minutesAway, classifyForecast, nearest, pickLine, LOAD_LABEL, sgDate, logOpen,
-  metersFrom, recordBoarded, migrateCollection, collectionStats,
+  metersFrom, recordBoarded, migrateCollection, collectionStats, findStop, createRefreshGate,
 } from './lib.js';
 import { createScene } from './scene.js';
 
@@ -34,10 +34,13 @@ const store = {
 const state = {
   stops: {}, pool: [], stopCode: null,
   forecast: null, forecastAt: 0, taxis: null, taxisAt: 0,
-  timer: null, busy: false, tab: 'board',
+  timer: null, tab: 'board',
   collection: {}, fresh: new Set(), selectedId: null, latest: null, confirming: null,
   scene: null, showTaxis: true,
 };
+
+// Only the newest stop's refresh may draw; a slower request for an older stop is dropped (review bug 1).
+const gate = createRefreshGate();
 
 // ---------- data loading ----------
 async function loadData() {
@@ -238,7 +241,7 @@ function renderServices({ services, weather, chars, slots }) {
 }
 
 // ---------- Stage 3 scene data ----------
-async function updateScene({ services, chars, slots, stop }) {
+async function updateScene({ services, chars, slots, stop }, ticket, code) {
   const [lng, lat] = stop;
   const buses = [];
   let noGps = 0;
@@ -256,26 +259,31 @@ async function updateScene({ services, chars, slots, stop }) {
     });
   }
   const taxis = state.showTaxis ? await getTaxis(lat, lng) : [];
-  state.scene.setData({ stopName: stopLabel(state.stopCode).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
+  if (!gate.isCurrent(ticket)) return;
+  state.scene.setData({ stopName: stopLabel(code).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
   const placed = buses.filter((b) => b.first).length;
   $('scene-note').textContent = noGps ? `${placed} buses placed, ${noGps} without live GPS yet` : `${placed} buses placed`;
 }
 
 async function refresh() {
-  if (!state.stopCode || state.busy) return;
-  state.busy = true;
-  const stop = state.stops[state.stopCode];
+  const code = state.stopCode;
+  if (!code) return;
+  const ticket = gate.begin(code);
+  if (!ticket) return; // this stop is already refreshing
+  const stop = findStop(state.stops, code);
+  if (!stop) { gate.end(ticket); return; }
   const [lng, lat] = stop;
   try {
     const [arrivals, weather] = await Promise.all([
-      fetchJson(`${ARRIVALS_API}?id=${encodeURIComponent(state.stopCode)}`),
+      fetchJson(`${ARRIVALS_API}?id=${encodeURIComponent(code)}`),
       getWeather(lat, lng),
     ]);
+    if (!gate.isCurrent(ticket)) return; // the user moved on while we waited
     showWeather(weather);
     const services = (arrivals.services || []).filter((s) => s.next || s.subsequent);
     if (!services.length) {
       renderState('No buses right now. Service may have ended for tonight, or nothing is due here yet.', true);
-      state.scene.setData({ stopName: stopLabel(state.stopCode).name, buses: [], taxis: [], kind: document.body.dataset.weather });
+      state.scene.setData({ stopName: stopLabel(code).name, buses: [], taxis: [], kind: document.body.dataset.weather });
       $('scene-note').textContent = 'No buses due';
       return;
     }
@@ -283,17 +291,19 @@ async function refresh() {
     const slots = assignPoolIndexes(services.map((s) => s.no), state.pool.length);
     const ids = services.map((s) => state.pool[slots[s.no]].id);
     const chars = await ensureCharacters(ids);
+    if (!gate.isCurrent(ticket)) return;
 
     const latest = { services, weather, chars, slots, stop };
     state.latest = latest;
     renderServices(latest);
-    await updateScene(latest);
+    await updateScene(latest, ticket, code);
   } catch {
+    if (!gate.isCurrent(ticket)) return;
     renderState(navigator.onLine === false
       ? 'You look offline. Reconnect and try again.'
       : 'Could not reach the bus times service. It is a free community service and may be busy.', true);
   } finally {
-    state.busy = false;
+    gate.end(ticket);
   }
 }
 
@@ -434,7 +444,7 @@ function showLanding(on) {
 
 // ---------- stop picker ----------
 function stopLabel(code) {
-  const [, , name, road] = state.stops[code];
+  const [, , name, road] = findStop(state.stops, code);
   return { name, road };
 }
 
@@ -514,6 +524,7 @@ let carouselStarted = false;
 
 function goHome({ push = true } = {}) {
   clearInterval(state.timer);
+  gate.cancel(); // an in-flight refresh must not draw on the home page
   state.stopCode = null;
   state.latest = null;
   state.confirming = null;
@@ -538,7 +549,7 @@ function goHome({ push = true } = {}) {
   const last = store.get('last-stop', null);
   const recent = $('recent');
   recent.textContent = '';
-  recent.hidden = !(last && state.stops[last]);
+  recent.hidden = !findStop(state.stops, last);
   if (!recent.hidden) {
     const btn = el('button', 'ride', `Back to ${stopLabel(last).name}`);
     btn.type = 'button';
@@ -553,8 +564,12 @@ function goHome({ push = true } = {}) {
 
 function route() {
   const code = new URLSearchParams(location.search).get('stop');
-  if (code && state.stops[code]) selectStop(code, { push: false });
-  else goHome({ push: false });
+  try {
+    if (findStop(state.stops, code)) selectStop(code, { push: false });
+    else goHome({ push: false });
+  } catch {
+    goHome({ push: false }); // never leave a blank page
+  }
 }
 
 // ---------- boot ----------

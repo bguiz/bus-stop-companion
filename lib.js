@@ -11,22 +11,14 @@ export function fnv1a(str) {
   return h >>> 0;
 }
 
-const naturalCompare = (a, b) => a.localeCompare(b, 'en', { numeric: true });
-
 /**
- * Map each bus service number to an index in the frozen pool.
- * Same number gives the same index; if two services at one stop collide,
- * the later one (in natural order) takes the next free slot. Deterministic per stop.
+ * Map each bus service number to a slot in the frozen character pool.
+ * The slot depends only on the service number, never on the other buses at the stop,
+ * so bus 96 is the same character everywhere. Two buses at one stop can share a character.
  */
 export function assignPoolIndexes(serviceNos, poolSize) {
   const out = {};
-  const used = new Set();
-  for (const no of [...serviceNos].sort(naturalCompare)) {
-    let i = fnv1a(no) % poolSize;
-    for (let guard = 0; used.has(i) && guard < poolSize; guard++) i = (i + 1) % poolSize;
-    used.add(i);
-    out[no] = i;
-  }
+  for (const no of serviceNos) out[no] = fnv1a(no) % poolSize;
   return out;
 }
 
@@ -141,4 +133,31 @@ export function sceneRadius(distances) {
 /** Distance between rings, chosen so at least two rings fit. */
 export function ringStep(radius) {
   return [2000, 1000, 500, 200, 100].find((s) => radius / s >= 2) ?? 100;
+}
+
+// ---------- Review fixes: helpers extracted so the bugs can be unit tested ----------
+
+/** Look up a stop by code. Returns the stop entry or null. Inherited keys like "constructor" are not stops. */
+export function findStop(stops, code) {
+  return code && Object.hasOwn(stops, code) ? stops[code] : null;
+}
+
+/**
+ * Decides which stop's refresh is allowed to draw. A refresh asks for a ticket with begin(),
+ * checks isCurrent() after every await, and calls end() when done.
+ * Starting a refresh for another stop makes the earlier one stale; the same stop is not started twice.
+ */
+export function createRefreshGate() {
+  let counter = 0;
+  let active = null;
+  return {
+    begin(code) {
+      if (active && active.code === code) return null;
+      active = { id: ++counter, code };
+      return active;
+    },
+    isCurrent(ticket) { return active === ticket; },
+    cancel() { active = null; },
+    end(ticket) { if (active === ticket) active = null; },
+  };
 }

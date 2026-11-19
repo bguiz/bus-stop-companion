@@ -3,19 +3,12 @@ import assert from 'node:assert/strict';
 import { fnv1a, assignPoolIndexes, archetypeFor, minutesAway, classifyForecast, nearest, situationKey, pickLine, logOpen, sgDate } from '../lib.js';
 
 test('hash is stable', () => { assert.equal(fnv1a('96'), fnv1a('96')); assert.notEqual(fnv1a('96'), fnv1a('97')); });
-test('same service maps to same slot regardless of order or neighbours when no collision', () => {
-  const a = assignPoolIndexes(['96', '15'], 150), b = assignPoolIndexes(['15', '96'], 150);
-  assert.deepEqual(a, b);
+test('same service maps to the same slot in any company', () => {
+  const a = assignPoolIndexes(['96', '15'], 136), b = assignPoolIndexes(['15', '96', '7'], 136);
+  assert.equal(a['96'], b['96']); assert.equal(a['15'], b['15']);
 });
-test('no two services at one stop share a slot', () => {
-  const nos = Array.from({ length: 40 }, (_, i) => String(i + 1));
-  const idx = Object.values(assignPoolIndexes(nos, 50));
-  assert.equal(new Set(idx).size, idx.length);
-});
-test('collision probes to next slot', () => {
-  const idx = assignPoolIndexes(['1', '2', '3'], 1 + 2); // tiny pool forces collisions
-  assert.equal(new Set(Object.values(idx)).size, 3);
-});
+// The earlier "no two services at one stop share a slot" and "collision probes to next slot" tests
+// were removed on purpose: that behaviour made a bus's character depend on the other buses at the stop (review bug 3).
 test('archetype is deterministic', () => assert.equal(archetypeFor('96'), archetypeFor('96')));
 test('minutesAway clamps negatives and floors', () => {
   assert.equal(minutesAway(-8136), 0); assert.equal(minutesAway(59999), 0); assert.equal(minutesAway(134864), 2);
