@@ -2,6 +2,7 @@
 // Buses are drawn as their characters at their real GPS positions; taxis drift as small spirits;
 // weather changes the sky and adds rain, lightning, haze, clouds or sparkles.
 import { ringStep, sceneRadius } from './lib.js';
+import { stopLabelBox, ellipsize } from './fixes/stop-label.js';
 
 const TAU = Math.PI * 2;
 const SKY = {
@@ -213,10 +214,6 @@ export function createScene(canvas, { reduceMotion = false } = {}) {
     ctx.beginPath();
     ctx.arc(w / 2, h / 2, 6, 0, TAU);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.font = '600 12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(data.stopName, w / 2, h / 2 + 26);
 
     // buses: later buses first so the next one is on top
     const ordered = [...data.buses].sort((a, b) => Number(a.first) - Number(b.first));
@@ -240,12 +237,24 @@ export function createScene(canvas, { reduceMotion = false } = {}) {
       ctx.fillText(label, px, py + r + (b.first ? 16 : 14));
     }
 
+    // stop name: drawn after the buses, above the marker, so a bus at the stop never hides it
+    if (data.stopName) {
+      ctx.font = '600 12px system-ui, sans-serif';
+      const box = stopLabelBox({ w, h, textWidth: ctx.measureText(data.stopName).width, avatarRadius: 22 });
+      ctx.fillStyle = 'rgba(8,12,24,0.8)';
+      ctx.fillRect(box.x, box.y, box.width, box.height);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(ellipsize(data.stopName, box.textMax, (s) => ctx.measureText(s).width), w / 2, box.y + 14);
+    }
+
     drawWeatherFront(t);
     if (!data.buses.length) {
       ctx.fillStyle = 'rgba(255,255,255,0.75)';
       ctx.font = '14px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('No buses with live GPS yet', w / 2, h / 2 - 40);
+      ctx.fillText('No buses with live GPS yet', w / 2, h / 2 + 48);
     }
   }
 
