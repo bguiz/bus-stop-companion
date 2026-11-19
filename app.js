@@ -4,6 +4,7 @@ import {
   findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
+import { pickerState } from './fixes/picker-close.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -600,7 +601,12 @@ function findNearest() {
   );
 }
 
+function closePicker(event) {
+  if (pickerState({ hasStop: Boolean(state.stopCode), event }).close) $('picker').hidden = true;
+}
+
 function openPicker() {
+  $('picker-cancel').hidden = !pickerState({ hasStop: Boolean(state.stopCode), event: 'open' }).showCancel;
   $('picker').hidden = false;
   $('stop-search').focus();
 }
@@ -669,10 +675,12 @@ async function init() {
 
   $('change-stop').addEventListener('click', openPicker);
   $('home').addEventListener('click', () => goHome());
+  $('picker-cancel').addEventListener('click', () => closePicker('cancel'));
+  $('stop-search').addEventListener('keydown', (e) => { if (e.key === 'Escape') closePicker('escape'); });
   $('refresh').addEventListener('click', () => refresh());
   $('nearest').addEventListener('click', findNearest);
   $('stop-search').addEventListener('input', (e) => searchStops(e.target.value));
-  for (const btn of document.querySelectorAll('#tabs button')) btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  for (const btn of document.querySelectorAll('#tabs button')) btn.addEventListener('click', () => { closePicker('tab'); showTab(btn.dataset.tab); });
   $('taxi-toggle').addEventListener('change', (e) => {
     state.showTaxis = e.target.checked;
     store.set('taxi-spirits', state.showTaxis);
