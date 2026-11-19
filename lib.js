@@ -105,32 +105,29 @@ export function metersFrom(lat0, lng0, lat, lng) {
 }
 
 /**
- * Record characters seen today. `days` counts distinct days seen, not refreshes.
- * Returns the new collection and the ids discovered for the first time.
+ * Add a character to the collection. Only called once the rider has confirmed boarding.
+ * Boarding the same character again counts another ride.
  */
-export function recordSeen(collection, entries, today) {
-  const next = { ...collection };
-  const fresh = [];
-  for (const { id, svc } of entries) {
-    const prev = next[id];
-    if (!prev) {
-      next[id] = { svc, first: today, last: today, days: 1, rode: false };
-      fresh.push(id);
-    } else if (prev.last !== today) {
-      next[id] = { ...prev, last: today, days: prev.days + 1 };
-    }
+export function recordBoarded(collection, { id, svc }, today) {
+  const prev = collection[id];
+  if (!prev) {
+    return { collection: { ...collection, [id]: { svc, first: today, last: today, rides: 1 } }, isNew: true };
   }
-  return { collection: next, fresh };
+  return { collection: { ...collection, [id]: { ...prev, svc, last: today, rides: prev.rides + 1 } }, isNew: false };
 }
 
-export function toggleRode(collection, id) {
-  if (!collection[id]) return collection;
-  return { ...collection, [id]: { ...collection[id], rode: !collection[id].rode } };
+/** Carry over only the earlier entries the owner marked as ridden; "seen" is not "boarded". */
+export function migrateCollection(old) {
+  const out = {};
+  for (const [id, c] of Object.entries(old || {})) {
+    if (c && c.rode === true) out[id] = { svc: c.svc, first: c.first, last: c.last || c.first, rides: 1 };
+  }
+  return out;
 }
 
 export function collectionStats(collection) {
-  const ids = Object.keys(collection);
-  return { met: ids.length, rode: ids.filter((id) => collection[id].rode).length };
+  const entries = Object.values(collection);
+  return { met: entries.length, rides: entries.reduce((n, c) => n + c.rides, 0) };
 }
 
 // ---------- Stage 3: scene ----------

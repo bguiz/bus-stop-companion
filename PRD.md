@@ -112,6 +112,7 @@ The string `1gMzjPkcteDQXw98TiP1lmvuzr3iwOQ8ztXpV2FWY` could not be decoded and 
 
 - Stages 2 and 3 were built before the week-1 test result, at the owner's request. The decision rule in section 2 still applies to what comes next: judge the experience by the open-day log before adding more.
 - **Landing carousel (owner request):** with no stop chosen, the landing page shows a carousel of 12 well-known bus services, each with its character and a sample line. It auto-advances, pauses on touch, and does not auto-advance for people who prefer reduced motion.
-- **Collection:** a character is recorded when its bus appears at a stop you view; a "Riding this" toggle marks it ridden. Stored in the browser only (`collection-v1`).
+- **Collection (revised):** a character joins the collection only after the owner taps "I boarded this" on a bus card and confirms. Seeing a bus is not enough. Boarding the same character again counts another ride. Stored in the browser only (`collection-v2`); earlier entries are carried over only if they had been marked ridden.
+- **Routing:** each stop has its own URL (`?stop=CODE`), so the back button works and stops can be bookmarked. The bare path always opens an empty home page, with a "Back to <last stop>" shortcut.
 - **Scene:** a canvas radar around the stop. Buses with live GPS appear as their characters at real positions and glide between updates; weather changes the sky and adds rain, lightning, haze, clouds or sparkles; nearby taxis from the data.gov.sg taxi API drift as "spirits" (toggleable). Terminals often have no GPS yet, so few buses are placed there.
 

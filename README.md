@@ -21,6 +21,11 @@ npm test        # unit tests for lib.js
 - `data/characters.json`: the **frozen** character pool (AniList IDs), curated 2026-11-19 from the top-favourited non-adult characters minus dark/violent series (Berserk, Chainsaw Man, Tokyo Ghoul, Vinland Saga, Monster, Death Note, Attack on Titan Final Season, Cyberpunk: Edgerunners). Changing it changes which character each bus number gets, so leave it alone once you've started using the app
 - `scripts/build-data.mjs`: one-off generator for the two data files (never overwrites `characters.json`)
 
+## URLs
+
+- `/` is always the empty home page (carousel and stop picker)
+- `/?stop=53009` opens a stop directly
+
 ## Deploy
 
 Publish the folder as-is to any static host (for example GitHub Pages).

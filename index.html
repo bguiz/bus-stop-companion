@@ -10,6 +10,7 @@
 <body data-weather="fair">
   <header class="top">
     <div class="stopline">
+      <button id="home" class="iconbtn" type="button" aria-label="Home" hidden>&#8962;</button>
       <button id="change-stop" class="stopbtn" type="button" aria-label="Change bus stop">
         <span id="stop-name" class="stopname">Pick a bus stop</span>
         <span id="stop-meta" class="stopmeta"></span>
@@ -27,6 +28,7 @@
         <div id="track" class="track"></div>
       </div>
       <div id="dots" class="dots" aria-hidden="true"></div>
+      <p id="recent" class="recent" hidden></p>
     </section>
 
     <section id="picker" class="picker" hidden>

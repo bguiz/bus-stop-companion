@@ -1,6 +1,6 @@
 import {
   assignPoolIndexes, minutesAway, classifyForecast, nearest, pickLine, LOAD_LABEL, sgDate, logOpen,
-  metersFrom, recordSeen, toggleRode, collectionStats,
+  metersFrom, recordBoarded, migrateCollection, collectionStats,
 } from './lib.js';
 import { createScene } from './scene.js';
 
@@ -35,7 +35,7 @@ const state = {
   stops: {}, pool: [], stopCode: null,
   forecast: null, forecastAt: 0, taxis: null, taxisAt: 0,
   timer: null, busy: false, tab: 'board',
-  collection: {}, fresh: new Set(), selectedId: null,
+  collection: {}, fresh: new Set(), selectedId: null, latest: null, confirming: null,
   scene: null, showTaxis: true,
 };
 
@@ -158,6 +158,39 @@ function renderState(message, withRetry) {
   board.append(box);
 }
 
+// Boarding: a character joins the collection only after the rider confirms they boarded that bus.
+function rerenderBoard() {
+  if (state.latest) renderServices(state.latest);
+}
+
+function confirmBoarding(no, entry) {
+  const { collection, isNew } = recordBoarded(state.collection, { id: entry.id, svc: no }, sgDate());
+  if (isNew) state.fresh.add(entry.id);
+  state.confirming = null;
+  setCollection(collection);
+  rerenderBoard();
+}
+
+function boardControl(no, entry) {
+  const wrap = el('span', 'board-ctl');
+  const button = (label, cls, onClick) => {
+    const b = el('button', cls, label);
+    b.type = 'button';
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  if (state.confirming === no) {
+    wrap.append(
+      el('span', 'ask', `Boarded bus ${no}?`),
+      button('Yes, I’m on it', 'ride yes', () => confirmBoarding(no, entry)),
+      button('Cancel', 'ride', () => { state.confirming = null; rerenderBoard(); }),
+    );
+  } else {
+    wrap.append(button('I boarded this', 'ride', () => { state.confirming = no; rerenderBoard(); }));
+  }
+  return wrap;
+}
+
 function renderServices({ services, weather, chars, slots }) {
   const board = $('board');
   board.textContent = '';
@@ -190,19 +223,14 @@ function renderServices({ services, weather, chars, slots }) {
     card.append(eta);
 
     const tags = el('div', 'tags');
-    if (state.fresh.has(entry.id)) tags.append(el('span', 'tag new', 'New!'));
+    if (state.collection[entry.id]) {
+      tags.append(el('span', 'tag collected', state.fresh.has(entry.id) ? 'Added to your collection!' : 'In your collection'));
+    }
     if (first && LOAD_LABEL[first.load]) tags.append(el('span', `tag ${first.load}`, LOAD_LABEL[first.load]));
     if (first && first.type === 'DD') tags.append(el('span', 'tag', 'Double deck'));
     if (first && first.type === 'BD') tags.append(el('span', 'tag', 'Bendy'));
     if (first && !first.monitored) tags.append(el('span', 'tag', 'No live GPS yet'));
-    const ride = el('button', 'ride', 'Riding this');
-    ride.type = 'button';
-    ride.setAttribute('aria-pressed', String(Boolean(state.collection[entry.id]?.rode)));
-    ride.addEventListener('click', () => {
-      setCollection(toggleRode(state.collection, entry.id));
-      ride.setAttribute('aria-pressed', String(Boolean(state.collection[entry.id]?.rode)));
-    });
-    tags.append(ride);
+    tags.append(boardControl(s.no, entry));
     card.append(tags);
 
     board.append(card);
@@ -256,12 +284,8 @@ async function refresh() {
     const ids = services.map((s) => state.pool[slots[s.no]].id);
     const chars = await ensureCharacters(ids);
 
-    const entries = services.map((s) => ({ id: state.pool[slots[s.no]].id, svc: s.no }));
-    const { collection, fresh } = recordSeen(state.collection, entries, sgDate());
-    state.fresh = new Set([...state.fresh, ...fresh]);
-    setCollection(collection);
-
     const latest = { services, weather, chars, slots, stop };
+    state.latest = latest;
     renderServices(latest);
     await updateScene(latest);
   } catch {
@@ -281,7 +305,7 @@ function startPolling() {
 // ---------- Stage 2: collection ----------
 function setCollection(next) {
   state.collection = next;
-  store.set('collection-v1', next);
+  store.set('collection-v2', next);
   if (state.tab === 'collection') renderCollection();
 }
 
@@ -289,19 +313,19 @@ function renderCollection() {
   const grid = $('collection-grid');
   grid.textContent = '';
   const chars = store.get('chars-v1', {});
-  const { met, rode } = collectionStats(state.collection);
-  $('collection-stats').textContent = `${met} of ${state.pool.length} met · ${rode} ridden. Characters appear when their bus shows up at a stop you view.`;
+  const { met, rides } = collectionStats(state.collection);
+  $('collection-stats').textContent = `${met} of ${state.pool.length} collected · ${rides} boarding${rides === 1 ? '' : 's'}. A character joins your collection when you confirm you boarded their bus.`;
 
   for (const entry of state.pool) {
     const owned = state.collection[entry.id];
     if (!owned) {
       const cell = el('div', 'cell locked', '?');
-      cell.setAttribute('aria-label', 'Not met yet');
+      cell.setAttribute('aria-label', 'Not collected yet');
       grid.append(cell);
       continue;
     }
     const detail = chars[entry.id];
-    const cell = el('button', `cell${owned.rode ? ' ridden' : ''}`);
+    const cell = el('button', 'cell');
     cell.type = 'button';
     cell.setAttribute('aria-pressed', String(state.selectedId === entry.id));
     cell.append(avatar(detail, entry.name, 'cellimg'), el('span', 'cap', detail ? detail.name : entry.name));
@@ -316,14 +340,9 @@ function renderCollection() {
   const entry = state.pool.find((c) => c.id === state.selectedId);
   const d = chars[state.selectedId];
   detailBox.textContent = '';
-  const ride = el('button', 'ride', sel.rode ? 'Ridden' : 'Mark as ridden');
-  ride.type = 'button';
-  ride.setAttribute('aria-pressed', String(sel.rode));
-  ride.addEventListener('click', () => setCollection(toggleRode(state.collection, state.selectedId)));
   detailBox.append(
     el('h2', '', d ? d.name : entry.name),
-    el('p', '', `Seen as bus ${sel.svc} · first met ${sel.first} · seen on ${sel.days} day${sel.days === 1 ? '' : 's'}`),
-    ride,
+    el('p', '', `Last boarded as bus ${sel.svc} · first collected ${sel.first} · boarded ${sel.rides} time${sel.rides === 1 ? '' : 's'}`),
   );
 }
 
@@ -419,14 +438,19 @@ function stopLabel(code) {
   return { name, road };
 }
 
-function selectStop(code) {
+// Each stop has its own URL (?stop=CODE). The bare path always opens an empty home page.
+function selectStop(code, { push = true } = {}) {
   state.stopCode = code;
+  state.latest = null;
+  state.confirming = null;
   store.set('last-stop', code);
+  if (push) history.pushState({}, '', `${location.pathname}?stop=${encodeURIComponent(code)}`);
   const { name, road } = stopLabel(code);
   $('stop-name').textContent = name;
   $('stop-meta').textContent = `${road} · ${code}`;
   $('picker').hidden = true;
   $('refresh').hidden = false;
+  $('home').hidden = false;
   $('tabs').hidden = false;
   showLanding(false);
   showTab(state.tab);
@@ -486,6 +510,53 @@ function openPicker() {
   $('stop-search').focus();
 }
 
+let carouselStarted = false;
+
+function goHome({ push = true } = {}) {
+  clearInterval(state.timer);
+  state.stopCode = null;
+  state.latest = null;
+  state.confirming = null;
+  state.scene.stop();
+  if (push) history.pushState({}, '', location.pathname);
+
+  $('stop-name').textContent = 'Pick a bus stop';
+  $('stop-meta').textContent = '';
+  $('refresh').hidden = true;
+  $('home').hidden = true;
+  $('tabs').hidden = true;
+  $('board').textContent = '';
+  for (const id of ['board', 'scene', 'collection']) $(id).hidden = true;
+  showWeather(null);
+
+  $('stop-search').value = '';
+  $('results').textContent = '';
+  $('picker-msg').textContent = '';
+  $('picker').hidden = false;
+  showLanding(true);
+
+  const last = store.get('last-stop', null);
+  const recent = $('recent');
+  recent.textContent = '';
+  recent.hidden = !(last && state.stops[last]);
+  if (!recent.hidden) {
+    const btn = el('button', 'ride', `Back to ${stopLabel(last).name}`);
+    btn.type = 'button';
+    btn.addEventListener('click', () => selectStop(last));
+    recent.append(btn);
+  }
+  if (!carouselStarted) {
+    carouselStarted = true;
+    buildCarousel().then(startCarousel);
+  }
+}
+
+function route() {
+  const code = new URLSearchParams(location.search).get('stop');
+  if (code && state.stops[code]) selectStop(code, { push: false });
+  else goHome({ push: false });
+}
+
 // ---------- boot ----------
 async function init() {
   const today = sgDate();
@@ -494,11 +565,13 @@ async function init() {
   $('open-days').textContent = `Opened on ${days.length} day${days.length === 1 ? '' : 's'} so far.`;
 
   state.scene = createScene($('scene-canvas'), { reduceMotion });
-  state.collection = store.get('collection-v1', {});
+  // v2 holds boarded characters only. Carry over earlier entries the owner marked as ridden.
+  state.collection = store.get('collection-v2', null) ?? migrateCollection(store.get('collection-v1', {}));
   state.showTaxis = store.get('taxi-spirits', true);
   $('taxi-toggle').checked = state.showTaxis;
 
   $('change-stop').addEventListener('click', openPicker);
+  $('home').addEventListener('click', () => goHome());
   $('refresh').addEventListener('click', () => refresh());
   $('nearest').addEventListener('click', findNearest);
   $('stop-search').addEventListener('input', (e) => searchStops(e.target.value));
@@ -518,15 +591,8 @@ async function init() {
   } catch {
     return renderState('Could not load the bus stop list. Reload to try again.');
   }
-  const last = store.get('last-stop', null);
-  if (last && state.stops[last]) {
-    selectStop(last);
-  } else {
-    showLanding(true);
-    openPicker();
-    $('board').textContent = '';
-    buildCarousel().then(startCarousel);
-  }
+  window.addEventListener('popstate', route);
+  route();
 }
 
 init();
