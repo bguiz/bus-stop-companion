@@ -709,6 +709,8 @@ function goHome({ push = true } = {}) {
   $('results').textContent = '';
   $('picker-msg').textContent = '';
   $('picker').hidden = false;
+  // Cancel would do nothing on Home (there is no stop to go back to), so hide it.
+  $('picker-cancel').hidden = !pickerState({ hasStop: false, event: 'open' }).showCancel;
   showLanding(true);
 
   const last = store.get('last-stop', null);

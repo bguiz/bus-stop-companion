@@ -282,7 +282,7 @@ test('Home clears the stop view, stops polling and offers the last stop', async 
   assert.equal(app.window.location.search, '');
   assert.equal(app.$('landing').hidden, false);
   assert.equal(app.$('picker').hidden, false);
-  // Known issue, not fixed here: the picker's Cancel button stays visible on Home (and does nothing there).
+  assert.equal(app.$('picker-cancel').hidden, true);
   assert.equal(app.$('tabs').hidden, true);
   assert.equal(app.$('weather').hidden, true);
   assert.equal(app.$('board').textContent, '');
