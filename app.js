@@ -3,6 +3,7 @@ import {
   metersFrom, recordBoarded, migrateCollection, collectionStats,
 } from './lib.js';
 import { createScene } from './scene.js';
+import { loadBoard, reconcileKeys } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
 const FORECAST_API = 'https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast';
@@ -33,7 +34,7 @@ const store = {
 
 const state = {
   stops: {}, pool: [], stopCode: null,
-  forecast: null, forecastAt: 0, taxis: null, taxisAt: 0,
+  forecast: null, forecastAt: 0, taxis: null, taxisAt: 0, taxisReq: null, weather: null, pollSeq: 0,
   timer: null, busy: false, tab: 'board',
   collection: {}, fresh: new Set(), selectedId: null, latest: null, confirming: null,
   scene: null, showTaxis: true,
@@ -84,10 +85,15 @@ function avatar(detail, fallbackName, cls = 'avatar') {
   if (detail && detail.img) {
     const img = el('img', cls);
     img.src = detail.img;
+    img.dataset.url = detail.img;
     img.alt = detail.name;
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
-    img.addEventListener('error', () => img.replaceWith(el('div', cls, fallbackName[0])));
+    img.addEventListener('error', () => {
+      const fallback = el('div', cls, fallbackName[0]);
+      fallback.dataset.failedUrl = detail.img; // remember, so polls do not retry a broken URL
+      img.replaceWith(fallback);
+    });
     return img;
   }
   return el('div', cls, fallbackName[0]);
@@ -112,9 +118,12 @@ async function getWeather(lat, lng) {
 async function getTaxis(lat, lng) {
   try {
     if (!state.taxis || Date.now() - state.taxisAt > TAXI_TTL_MS) {
-      const json = await fetchJson(TAXI_API, undefined, 15000);
-      state.taxis = json.features[0].geometry.coordinates; // [lng, lat] pairs
-      state.taxisAt = Date.now();
+      // Overlapping callers share one request.
+      state.taxisReq ??= fetchJson(TAXI_API, undefined, 15000).then((json) => {
+        state.taxis = json.features[0].geometry.coordinates; // [lng, lat] pairs
+        state.taxisAt = Date.now();
+      }).finally(() => { state.taxisReq = null; });
+      await state.taxisReq;
     }
     return state.taxis
       .map(([tlng, tlat]) => metersFrom(lat, lng, tlat, tlng))
@@ -163,16 +172,29 @@ function rerenderBoard() {
   if (state.latest) renderServices(state.latest);
 }
 
+// After the rider's own tap replaces the control they pressed, put focus on its safe button.
+function focusSafeButton(no) {
+  const card = [...$('board').children].find((c) => c.dataset.svc === no);
+  const safe = card && card.querySelector('.board-ctl .safe');
+  if (safe) safe.focus();
+}
+
 function confirmBoarding(no, entry) {
   const { collection, isNew } = recordBoarded(state.collection, { id: entry.id, svc: no }, sgDate());
   if (isNew) state.fresh.add(entry.id);
   state.confirming = null;
   setCollection(collection);
   rerenderBoard();
+  focusSafeButton(no);
+}
+
+function controlMode(no, entry) {
+  return `${state.confirming === no ? 'confirm' : 'idle'}:${entry.id}`;
 }
 
 function boardControl(no, entry) {
   const wrap = el('span', 'board-ctl');
+  wrap.dataset.mode = controlMode(no, entry);
   const button = (label, cls, onClick) => {
     const b = el('button', cls, label);
     b.type = 'button';
@@ -183,58 +205,98 @@ function boardControl(no, entry) {
     wrap.append(
       el('span', 'ask', `Boarded bus ${no}?`),
       button('Yes, I’m on it', 'ride yes', () => confirmBoarding(no, entry)),
-      button('Cancel', 'ride', () => { state.confirming = null; rerenderBoard(); }),
+      button('Cancel', 'ride safe', () => { state.confirming = null; rerenderBoard(); focusSafeButton(no); }),
     );
   } else {
-    wrap.append(button('I boarded this', 'ride', () => { state.confirming = no; rerenderBoard(); }));
+    wrap.append(button('I boarded this', 'ride safe', () => { state.confirming = no; rerenderBoard(); focusSafeButton(no); }));
   }
   return wrap;
 }
 
+const ENTRY_CLASS_MS = 400;
+
+function buildCard(no) {
+  const card = el('article', 'card enter');
+  card.dataset.svc = no;
+  const who = el('div', 'who');
+  who.append(el('div', 'svc'), el('div', 'char'));
+  card.append(el('div', 'avatar'), who, el('div', 'eta'), el('div', 'tags'));
+  // A timer, not animationend: that never fires under reduced motion.
+  setTimeout(() => card.classList.remove('enter'), ENTRY_CLASS_MS);
+  return card;
+}
+
+function updateAvatar(card, entry, detail) {
+  const cur = card.firstElementChild;
+  const want = detail && detail.img ? detail.img : undefined;
+  const have = cur.dataset.url ?? cur.dataset.failedUrl;
+  if (card.dataset.entry === entry.id && have === want) return; // same picture: leave it loaded
+  card.dataset.entry = entry.id;
+  cur.replaceWith(avatar(detail, entry.name));
+}
+
+function updateCard(card, s, entry, detail, kind) {
+  const buses = normaliseBuses(s);
+  const first = buses[0];
+  updateAvatar(card, entry, detail);
+
+  const [who, eta, tags] = [card.children[1], card.children[2], card.children[3]];
+  const svc = who.children[0];
+  svc.textContent = s.no;
+  if (s.operator) svc.append(el('small', '', s.operator));
+  who.children[1].textContent = detail ? detail.name : entry.name;
+  const lineText = first ? pickLine(s.no, { mins: first.mins, load: first.load, weather: kind, monitored: first.monitored }) : null;
+  const line = who.querySelector('.line');
+  if (lineText === null) { if (line) line.remove(); }
+  else if (line) { if (line.textContent !== lineText) line.textContent = lineText; }
+  else who.append(el('p', 'line', lineText));
+
+  eta.textContent = '';
+  if (first) {
+    eta.append(el('div', 'big', first.mins <= 0 ? 'Arr' : String(first.mins)));
+    if (first.mins > 0) eta.append(el('div', 'unit', 'min'));
+    const later = buses.slice(1).map((b) => (b.mins <= 0 ? 'Arr' : `${b.mins}`));
+    if (later.length) eta.append(el('div', 'then', `then ${later.join(', ')}`));
+  } else {
+    eta.append(el('div', 'unit', 'No ETA'));
+  }
+
+  // Tags are plain text and rebuilt; the boarding control stays put unless its mode changed.
+  let ctl = tags.querySelector('.board-ctl');
+  for (const child of [...tags.children]) if (child !== ctl) child.remove();
+  const info = [];
+  if (state.collection[entry.id]) {
+    info.push(el('span', 'tag collected', state.fresh.has(entry.id) ? 'Added to your collection!' : 'In your collection'));
+  }
+  if (first && LOAD_LABEL[first.load]) info.push(el('span', `tag ${first.load}`, LOAD_LABEL[first.load]));
+  if (first && first.type === 'DD') info.push(el('span', 'tag', 'Double deck'));
+  if (first && first.type === 'BD') info.push(el('span', 'tag', 'Bendy'));
+  if (first && !first.monitored) info.push(el('span', 'tag', 'No live GPS yet'));
+  if (ctl && ctl.dataset.mode !== controlMode(s.no, entry)) { ctl.remove(); ctl = null; }
+  if (!ctl) ctl = boardControl(s.no, entry);
+  tags.append(...info, ctl);
+}
+
+// Idempotent: updates cards in place, keyed by service number, so focus, images and animations survive polls.
 function renderServices({ services, weather, chars, slots }) {
   const board = $('board');
-  board.textContent = '';
   const kind = weather ? weather.kind : 'fair';
-
-  for (const s of services) {
-    const buses = normaliseBuses(s);
-    const first = buses[0];
-    const entry = state.pool[slots[s.no]];
-    const detail = chars[entry.id];
-    const card = el('article', 'card');
-    card.append(avatar(detail, entry.name));
-
-    const who = el('div', 'who');
-    const svc = el('div', 'svc', s.no);
-    if (s.operator) svc.append(el('small', '', s.operator));
-    who.append(svc, el('div', 'char', detail ? detail.name : entry.name));
-    if (first) who.append(el('p', 'line', pickLine(s.no, { mins: first.mins, load: first.load, weather: kind, monitored: first.monitored })));
-    card.append(who);
-
-    const eta = el('div', 'eta');
-    if (first) {
-      eta.append(el('div', 'big', first.mins <= 0 ? 'Arr' : String(first.mins)));
-      if (first.mins > 0) eta.append(el('div', 'unit', 'min'));
-      const later = buses.slice(1).map((b) => (b.mins <= 0 ? 'Arr' : `${b.mins}`));
-      if (later.length) eta.append(el('div', 'then', `then ${later.join(', ')}`));
-    } else {
-      eta.append(el('div', 'unit', 'No ETA'));
-    }
-    card.append(eta);
-
-    const tags = el('div', 'tags');
-    if (state.collection[entry.id]) {
-      tags.append(el('span', 'tag collected', state.fresh.has(entry.id) ? 'Added to your collection!' : 'In your collection'));
-    }
-    if (first && LOAD_LABEL[first.load]) tags.append(el('span', `tag ${first.load}`, LOAD_LABEL[first.load]));
-    if (first && first.type === 'DD') tags.append(el('span', 'tag', 'Double deck'));
-    if (first && first.type === 'BD') tags.append(el('span', 'tag', 'Bendy'));
-    if (first && !first.monitored) tags.append(el('span', 'tag', 'No live GPS yet'));
-    tags.append(boardControl(s.no, entry));
-    card.append(tags);
-
-    board.append(card);
+  const existing = new Map();
+  for (const child of [...board.children]) {
+    if (child.classList.contains('card')) existing.set(child.dataset.svc, child);
+    else child.remove(); // a message such as "Looking for buses…"
   }
+  const { remove, order } = reconcileKeys([...existing.keys()], services.map((s) => s.no));
+  for (const no of remove) existing.get(no).remove();
+
+  const byNo = new Map(services.map((s) => [s.no, s]));
+  order.forEach((no, i) => {
+    const s = byNo.get(no);
+    const entry = state.pool[slots[no]];
+    const card = existing.get(no) ?? buildCard(no);
+    updateCard(card, s, entry, chars[entry.id], kind);
+    if (board.children[i] !== card) board.insertBefore(card, board.children[i] ?? null);
+  });
 }
 
 // ---------- Stage 3 scene data ----------
@@ -264,34 +326,52 @@ async function updateScene({ services, chars, slots, stop }) {
 async function refresh() {
   if (!state.stopCode || state.busy) return;
   state.busy = true;
-  const stop = state.stops[state.stopCode];
-  const [lng, lat] = stop;
+  const code = state.stopCode;
+  const poll = ++state.pollSeq;
+  const [lng, lat] = state.stops[code];
+  const isCurrent = () => state.stopCode === code && state.pollSeq === poll;
+  let picked = null;
   try {
-    const [arrivals, weather] = await Promise.all([
-      fetchJson(`${ARRIVALS_API}?id=${encodeURIComponent(state.stopCode)}`),
-      getWeather(lat, lng),
-    ]);
-    showWeather(weather);
-    const services = (arrivals.services || []).filter((s) => s.next || s.subsequent);
-    if (!services.length) {
-      renderState('No buses right now. Service may have ended for tonight, or nothing is due here yet.', true);
-      state.scene.setData({ stopName: stopLabel(state.stopCode).name, buses: [], taxis: [], kind: document.body.dataset.weather });
-      $('scene-note').textContent = 'No buses due';
-      return;
-    }
-    services.sort((a, b) => (a.next?.duration_ms ?? Infinity) - (b.next?.duration_ms ?? Infinity));
-    const slots = assignPoolIndexes(services.map((s) => s.no), state.pool.length);
-    const ids = services.map((s) => state.pool[slots[s.no]].id);
-    const chars = await ensureCharacters(ids);
-
-    const latest = { services, weather, chars, slots, stop };
-    state.latest = latest;
-    renderServices(latest);
-    await updateScene(latest);
+    const { done } = await loadBoard({
+      fetchArrivals: () => fetchJson(`${ARRIVALS_API}?id=${encodeURIComponent(code)}`),
+      fetchWeather: async () => {
+        const w = await getWeather(lat, lng);
+        if (w) state.weather = { code, w };
+        return w;
+      },
+      fetchChars: (ids) => ensureCharacters(ids),
+      cachedChars: () => store.get('chars-v1', {}),
+      lastWeather: () => (state.weather && state.weather.code === code ? state.weather.w : null),
+      isCurrent,
+      prepare: (arrivals) => {
+        const services = (arrivals.services || []).filter((s) => s.next || s.subsequent);
+        if (!services.length) {
+          renderState('No buses right now. Service may have ended for tonight, or nothing is due here yet.', true);
+          state.scene.setData({ stopName: stopLabel(code).name, buses: [], taxis: [], kind: document.body.dataset.weather });
+          $('scene-note').textContent = 'No buses due';
+          return null;
+        }
+        services.sort((a, b) => (a.next?.duration_ms ?? Infinity) - (b.next?.duration_ms ?? Infinity));
+        const slots = assignPoolIndexes(services.map((s) => s.no), state.pool.length);
+        picked = { services, slots };
+        return services.map((s) => state.pool[slots[s.no]].id);
+      },
+      onEmpty: ({ weather }) => showWeather(weather),
+      render: ({ weather, chars }) => {
+        showWeather(weather);
+        const latest = { ...picked, weather, chars, stop: state.stops[code] };
+        state.latest = latest;
+        renderServices(latest);
+        updateScene(latest).catch(() => {});
+      },
+    });
+    done.catch(() => {});
   } catch {
-    renderState(navigator.onLine === false
-      ? 'You look offline. Reconnect and try again.'
-      : 'Could not reach the bus times service. It is a free community service and may be busy.', true);
+    if (isCurrent()) {
+      renderState(navigator.onLine === false
+        ? 'You look offline. Reconnect and try again.'
+        : 'Could not reach the bus times service. It is a free community service and may be busy.', true);
+    }
   } finally {
     state.busy = false;
   }
