@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bus Stop Companion</title>
+  <meta name="description" content="Live Singapore bus arrivals, each bus a hidden anime character.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-weather="fair">
+  <header class="top">
+    <div class="stopline">
+      <button id="change-stop" class="stopbtn" type="button" aria-label="Change bus stop">
+        <span id="stop-name" class="stopname">Pick a bus stop</span>
+        <span id="stop-meta" class="stopmeta"></span>
+      </button>
+      <button id="refresh" class="iconbtn" type="button" aria-label="Refresh arrivals" hidden>&#8635;</button>
+    </div>
+    <p id="weather" class="weather" hidden></p>
+  </header>
+
+  <main>
+    <section id="picker" class="picker" hidden>
+      <label class="sr" for="stop-search">Search bus stops by name, road or code</label>
+      <input id="stop-search" type="search" placeholder="Search name, road or stop code" autocomplete="off" enterkeyhint="search">
+      <button id="nearest" class="primary" type="button">Use my location</button>
+      <p id="picker-msg" class="msg" role="status"></p>
+      <ul id="results" class="results"></ul>
+    </section>
+
+    <section id="board" class="board" aria-live="polite"></section>
+  </main>
+
+  <footer class="foot">
+    <p id="open-days"></p>
+    <p>Bus times: <a href="https://github.com/cheeaun/arrivelah">arrivelah</a> (LTA data). Weather: <a href="https://data.gov.sg">data.gov.sg</a>. Characters and artwork: <a href="https://anilist.co">AniList</a>, owned by their rights holders. A fan-made toy, not affiliated with any of them.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

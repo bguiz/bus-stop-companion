@@ -1,0 +1,546 @@
+[
+ {
+  "id": 127691,
+  "name": "Satoru Gojou"
+ },
+ {
+  "id": 45627,
+  "name": "Levi"
+ },
+ {
+  "id": 40,
+  "name": "Luffy Monkey"
+ },
+ {
+  "id": 27,
+  "name": "Killua Zoldyck"
+ },
+ {
+  "id": 40882,
+  "name": "Eren Yeager"
+ },
+ {
+  "id": 62,
+  "name": "Zoro Roronoa"
+ },
+ {
+  "id": 417,
+  "name": "Lelouch Lamperouge"
+ },
+ {
+  "id": 88572,
+  "name": "Emilia"
+ },
+ {
+  "id": 40881,
+  "name": "Mikasa Ackerman"
+ },
+ {
+  "id": 89334,
+  "name": "Arataka Reigen"
+ },
+ {
+  "id": 126824,
+  "name": "Maomao"
+ },
+ {
+  "id": 176754,
+  "name": "Frieren"
+ },
+ {
+  "id": 34470,
+  "name": "Kurisu Makise"
+ },
+ {
+  "id": 14,
+  "name": "Itachi Uchiha"
+ },
+ {
+  "id": 85,
+  "name": "Kakashi Hatake"
+ },
+ {
+  "id": 35252,
+  "name": "Rintarou Okabe"
+ },
+ {
+  "id": 127212,
+  "name": "Yuuji Itadori"
+ },
+ {
+  "id": 127222,
+  "name": "Mai Sakurajima"
+ },
+ {
+  "id": 28,
+  "name": "Kurapika"
+ },
+ {
+  "id": 89616,
+  "name": "Shigeo Kageyama"
+ },
+ {
+  "id": 90169,
+  "name": "Violet Evergarden"
+ },
+ {
+  "id": 120649,
+  "name": "Kaguya Shinomiya"
+ },
+ {
+  "id": 11,
+  "name": "Edward Elric"
+ },
+ {
+  "id": 17,
+  "name": "Naruto Uzumaki"
+ },
+ {
+  "id": 126071,
+  "name": "Tanjirou Kamado"
+ },
+ {
+  "id": 500,
+  "name": "Sakura Matou"
+ },
+ {
+  "id": 126635,
+  "name": "Megumi Fushiguro"
+ },
+ {
+  "id": 133676,
+  "name": "Marin Kitagawa"
+ },
+ {
+  "id": 6356,
+  "name": "Joseph Joestar"
+ },
+ {
+  "id": 89220,
+  "name": "Shouto Todoroki"
+ },
+ {
+  "id": 89361,
+  "name": "Megumin"
+ },
+ {
+  "id": 88575,
+  "name": "Rem"
+ },
+ {
+  "id": 88892,
+  "name": "Katsuki Bakugou"
+ },
+ {
+  "id": 89198,
+  "name": "Osamu Dazai"
+ },
+ {
+  "id": 672,
+  "name": "Gintoki Sakata"
+ },
+ {
+  "id": 121103,
+  "name": "Chika Fujiwara"
+ },
+ {
+  "id": 88573,
+  "name": "Subaru Natsuki"
+ },
+ {
+  "id": 126375,
+  "name": "Itsuki Nakano"
+ },
+ {
+  "id": 124382,
+  "name": "Ichigo"
+ },
+ {
+  "id": 123212,
+  "name": "Kiyotaka Ayanokouji"
+ },
+ {
+  "id": 30,
+  "name": "Gon Freecss"
+ },
+ {
+  "id": 124142,
+  "name": "Senkuu Ishigami"
+ },
+ {
+  "id": 305,
+  "name": "Sanji"
+ },
+ {
+  "id": 73935,
+  "name": "Saitama"
+ },
+ {
+  "id": 125886,
+  "name": "Miko Iino"
+ },
+ {
+  "id": 129928,
+  "name": "Jin-U Seong"
+ },
+ {
+  "id": 61,
+  "name": "Robin Nico"
+ },
+ {
+  "id": 90107,
+  "name": "Kusuo Saiki"
+ },
+ {
+  "id": 5,
+  "name": "Ichigo Kurosaki"
+ },
+ {
+  "id": 94,
+  "name": "Asuka Langley Souryuu"
+ },
+ {
+  "id": 22037,
+  "name": "Hitagi Senjougahara"
+ },
+ {
+  "id": 124381,
+  "name": "Zero Two"
+ },
+ {
+  "id": 66173,
+  "name": "Izumi Miyamura"
+ },
+ {
+  "id": 129130,
+  "name": "Inosuke Hashibira"
+ },
+ {
+  "id": 127518,
+  "name": "Nezuko Kamado"
+ },
+ {
+  "id": 64769,
+  "name": "Shouyou Hinata"
+ },
+ {
+  "id": 68,
+  "name": "Roy Mustang"
+ },
+ {
+  "id": 121102,
+  "name": "Yuu Ishigami"
+ },
+ {
+  "id": 138102,
+  "name": "Yor Forger"
+ },
+ {
+  "id": 1,
+  "name": "Spike Spiegel"
+ },
+ {
+  "id": 31,
+  "name": "Hisoka Morow"
+ },
+ {
+  "id": 4003,
+  "name": "Joutarou Kuujou"
+ },
+ {
+  "id": 46494,
+  "name": "Armin Arlert"
+ },
+ {
+  "id": 71121,
+  "name": "Hange Zoe"
+ },
+ {
+  "id": 89028,
+  "name": "Izuku Midoriya"
+ },
+ {
+  "id": 23602,
+  "name": "Shinobu Oshino"
+ },
+ {
+  "id": 129131,
+  "name": "Zenitsu Agatsuma"
+ },
+ {
+  "id": 133704,
+  "name": "Kento Nanami"
+ },
+ {
+  "id": 123962,
+  "name": "Rimuru Tempest"
+ },
+ {
+  "id": 133700,
+  "name": "Nobara Kugisaki"
+ },
+ {
+  "id": 13,
+  "name": "Sasuke Uchiha"
+ },
+ {
+  "id": 138100,
+  "name": "Anya Forger"
+ },
+ {
+  "id": 46496,
+  "name": "Erwin Smith"
+ },
+ {
+  "id": 134167,
+  "name": "Maki Zenin"
+ },
+ {
+  "id": 84677,
+  "name": "Yato"
+ },
+ {
+  "id": 498,
+  "name": "Rin Toosaka"
+ },
+ {
+  "id": 257562,
+  "name": "Hitori Gotou"
+ },
+ {
+  "id": 67065,
+  "name": "Hachiman Hikigaya"
+ },
+ {
+  "id": 22036,
+  "name": "Koyomi Araragi"
+ },
+ {
+  "id": 64771,
+  "name": "Tobio Kageyama"
+ },
+ {
+  "id": 130050,
+  "name": "Giyuu Tomioka"
+ },
+ {
+  "id": 38005,
+  "name": "Homura Akemi"
+ },
+ {
+  "id": 497,
+  "name": "Artoria Pendragon"
+ },
+ {
+  "id": 133701,
+  "name": "Sukuna"
+ },
+ {
+  "id": 188783,
+  "name": "Kana Arima"
+ },
+ {
+  "id": 66171,
+  "name": "Kyouko Hori"
+ },
+ {
+  "id": 129571,
+  "name": "Yuuta Okkotsu"
+ },
+ {
+  "id": 86,
+  "name": "Rei Ayanami"
+ },
+ {
+  "id": 80243,
+  "name": "Shouko Nishimiya"
+ },
+ {
+  "id": 88350,
+  "name": "Roxy Migurdia"
+ },
+ {
+  "id": 126373,
+  "name": "Miku Nakano"
+ },
+ {
+  "id": 129133,
+  "name": "Kyoujurou Rengoku"
+ },
+ {
+  "id": 89,
+  "name": "Shinji Ikari"
+ },
+ {
+  "id": 1259,
+  "name": "Misato Katsuragi"
+ },
+ {
+  "id": 1111,
+  "name": "C.C."
+ },
+ {
+  "id": 124440,
+  "name": "Yami Sukehiro"
+ },
+ {
+  "id": 80491,
+  "name": "Shouya Ishida"
+ },
+ {
+  "id": 121104,
+  "name": "Ai Hayasaka"
+ },
+ {
+  "id": 127221,
+  "name": "Sakuta Azusagawa"
+ },
+ {
+  "id": 126372,
+  "name": "Nino Nakano"
+ },
+ {
+  "id": 67327,
+  "name": "Yuu Nishinoya"
+ },
+ {
+  "id": 71933,
+  "name": "Karma Akabane"
+ },
+ {
+  "id": 13767,
+  "name": "Law Trafalgar"
+ },
+ {
+  "id": 209,
+  "name": "Kyou Souma"
+ },
+ {
+  "id": 723,
+  "name": "Nami"
+ },
+ {
+  "id": 11772,
+  "name": "Gyro Zeppeli"
+ },
+ {
+  "id": 141061,
+  "name": "Vladilena Milizé"
+ },
+ {
+  "id": 138101,
+  "name": "Loid Forger"
+ },
+ {
+  "id": 123385,
+  "name": "Phosphophyllite"
+ },
+ {
+  "id": 36828,
+  "name": "Asuna Yuuki"
+ },
+ {
+  "id": 145341,
+  "name": "Manjirou Sano"
+ },
+ {
+  "id": 121724,
+  "name": "Ray"
+ },
+ {
+  "id": 71267,
+  "name": "Kenma Kozume"
+ },
+ {
+  "id": 174873,
+  "name": "Kurena Kukumila"
+ },
+ {
+  "id": 6194,
+  "name": "Musashi Miyamoto"
+ },
+ {
+  "id": 157115,
+  "name": "Toge Inumaki"
+ },
+ {
+  "id": 246,
+  "name": "Gokuu Son"
+ },
+ {
+  "id": 67067,
+  "name": "Yukino Yukinoshita"
+ },
+ {
+  "id": 65643,
+  "name": "Koro-sensei"
+ },
+ {
+  "id": 154224,
+  "name": "Mami Nanami"
+ },
+ {
+  "id": 58,
+  "name": "Chrollo Lucilfer"
+ },
+ {
+  "id": 123285,
+  "name": "Asta"
+ },
+ {
+  "id": 4004,
+  "name": "Dio Brando"
+ },
+ {
+  "id": 13580,
+  "name": "Ash Lynx"
+ },
+ {
+  "id": 89364,
+  "name": "Kazuma Satou"
+ },
+ {
+  "id": 23277,
+  "name": "Meruem"
+ },
+ {
+  "id": 2075,
+  "name": "Kamina"
+ },
+ {
+  "id": 136070,
+  "name": "Shinobu Kochou"
+ },
+ {
+  "id": 69411,
+  "name": "Kaori Miyazono"
+ },
+ {
+  "id": 71611,
+  "name": "Tooru Oikawa"
+ },
+ {
+  "id": 121101,
+  "name": "Miyuki Shirogane"
+ },
+ {
+  "id": 2072,
+  "name": "Ace Portgas"
+ },
+ {
+  "id": 207,
+  "name": "Tooru Honda"
+ },
+ {
+  "id": 36765,
+  "name": "Kazuto Kirigaya"
+ },
+ {
+  "id": 183965,
+  "name": "Fern"
+ },
+ {
+  "id": 309,
+  "name": "Chopper Tony Tony"
+ }
+]
