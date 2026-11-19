@@ -5,6 +5,7 @@ import {
 } from './lib.js';
 import { createScene } from './scene.js';
 import { sceneNote } from './fixes/plural-note.js';
+import { collectionForPool, selectedEntry } from './fixes/pool-latent.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -404,11 +405,12 @@ function renderCollection() {
   const grid = $('collection-grid');
   grid.textContent = '';
   const chars = store.get('chars-v1', {});
-  const { met, rides } = collectionStats(state.collection);
+  const visible = collectionForPool(state.pool, state.collection);
+  const { met, rides } = collectionStats(visible);
   $('collection-stats').textContent = `${met} of ${state.pool.length} collected · ${rides} boarding${rides === 1 ? '' : 's'}. A character joins your collection when you confirm you boarded their bus.`;
 
-  for (const entry of orderPool(state.pool, state.collection)) {
-    const owned = state.collection[entry.id];
+  for (const entry of orderPool(state.pool, visible)) {
+    const owned = visible[entry.id];
     if (!owned) {
       const cell = el('div', 'cell locked', '?');
       cell.setAttribute('aria-label', 'Not collected yet');
@@ -425,10 +427,10 @@ function renderCollection() {
   }
 
   const detailBox = $('collection-detail');
-  const sel = state.selectedId && state.collection[state.selectedId];
+  const entry = selectedEntry(state.pool, state.selectedId);
+  const sel = entry && visible[entry.id];
   detailBox.hidden = !sel;
   if (!sel) return;
-  const entry = state.pool.find((c) => c.id === state.selectedId);
   const d = chars[state.selectedId];
   detailBox.textContent = '';
   detailBox.append(
