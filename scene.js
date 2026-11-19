@@ -3,6 +3,7 @@
 // weather changes the sky and adds rain, lightning, haze, clouds or sparkles.
 import { ringStep, sceneRadius } from './lib.js';
 import { stopLabelBox, ellipsize } from './fixes/stop-label.js';
+import { reconcileSprites } from './fixes/sprite-reset.js';
 
 const TAU = Math.PI * 2;
 const SKY = {
@@ -23,11 +24,12 @@ export function createScene(canvas, { reduceMotion = false } = {}) {
   let running = false;
   let radius = 800;
   let targetRadius = 800;
+  let lastStopKey = null;
   let flash = 0;
   let nextFlashAt = 0;
 
   let data = { stopName: '', buses: [], taxis: [], kind: 'fair', showTaxis: true, noGps: 0 };
-  const sprites = new Map(); // bus key -> { x, y, tx, ty }
+  let sprites = new Map(); // bus key -> { x, y, tx, ty }
   const images = new Map(); // url -> HTMLImageElement
   const drops = Array.from({ length: 160 }, () => ({ x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 0.8 }));
   const motes = Array.from({ length: 40 }, () => ({ x: Math.random(), y: Math.random(), p: Math.random() * TAU, s: 0.2 + Math.random() }));
@@ -58,14 +60,11 @@ export function createScene(canvas, { reduceMotion = false } = {}) {
   /** Replace what the scene shows. Bus positions glide to their new spots. */
   function setData(next) {
     data = { ...data, ...next };
-    const live = new Set();
-    for (const b of data.buses) {
-      live.add(b.key);
-      const s = sprites.get(b.key);
-      if (s) { s.tx = b.x; s.ty = b.y; } else sprites.set(b.key, { x: b.x, y: b.y, tx: b.x, ty: b.y });
-    }
-    for (const key of [...sprites.keys()]) if (!live.has(key)) sprites.delete(key);
+    const r = reconcileSprites(sprites, lastStopKey, data.stopKey, data.buses);
+    sprites = r.sprites;
+    lastStopKey = data.stopKey;
     targetRadius = sceneRadius(data.buses.filter((b) => b.first).map((b) => Math.hypot(b.x, b.y)));
+    if (r.reset) radius = targetRadius;
     if (reduceMotion) { radius = targetRadius; for (const s of sprites.values()) { s.x = s.tx; s.y = s.ty; } }
     if (!running) draw(performance.now() / 1000);
   }

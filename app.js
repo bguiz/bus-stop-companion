@@ -327,7 +327,7 @@ async function updateScene({ services, chars, slots, stop }, ticket, code) {
   }
   const taxis = state.showTaxis ? await getTaxis(lat, lng) : [];
   if (!gate.isCurrent(ticket)) return;
-  state.scene.setData({ stopName: stopLabel(code).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
+  state.scene.setData({ stopKey: code, stopName: stopLabel(code).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
   const placed = buses.filter((b) => b.first).length;
   $('scene-note').textContent = sceneNote(placed, noGps);
 }
@@ -360,7 +360,7 @@ async function refresh() {
         const services = (arrivals.services || []).filter((s) => s.next || s.subsequent);
         if (!services.length) {
           renderState('No buses right now. Service may have ended for tonight, or nothing is due here yet.', true);
-          state.scene.setData({ stopName: stopLabel(code).name, buses: [], taxis: [], kind: document.body.dataset.weather });
+          state.scene.setData({ stopKey: code, stopName: stopLabel(code).name, buses: [], taxis: [], kind: document.body.dataset.weather });
           $('scene-note').textContent = 'No buses due';
           return null;
         }
