@@ -4,6 +4,7 @@ import {
   findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
+import { sceneNote } from './fixes/plural-note.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -326,7 +327,7 @@ async function updateScene({ services, chars, slots, stop }, ticket, code) {
   if (!gate.isCurrent(ticket)) return;
   state.scene.setData({ stopName: stopLabel(code).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
   const placed = buses.filter((b) => b.first).length;
-  $('scene-note').textContent = noGps ? `${placed} buses placed, ${noGps} without live GPS yet` : `${placed} buses placed`;
+  $('scene-note').textContent = sceneNote(placed, noGps);
 }
 
 async function refresh() {
