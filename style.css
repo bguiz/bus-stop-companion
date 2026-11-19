@@ -48,7 +48,7 @@ a { color: var(--accent); }
 
 main { padding-top: 14px; padding-bottom: 24px; }
 .picker { display: grid; gap: 10px; margin-bottom: 16px; }
-.picker[hidden], .weather[hidden], .iconbtn[hidden] { display: none; }
+.picker[hidden], .weather[hidden], .iconbtn[hidden], #picker-cancel[hidden] { display: none; }
 input[type="search"] {
   width: 100%; font: inherit; color: var(--text); padding: 12px 14px; border-radius: var(--radius);
   background: rgba(0, 0, 0, 0.35); border: 1px solid var(--card-border);
