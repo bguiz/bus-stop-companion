@@ -1,6 +1,7 @@
 import {
-  assignPoolIndexes, minutesAway, classifyForecast, nearest, pickLine, LOAD_LABEL, sgDate, logOpen,
+  assignPoolIndexes, minutesAway, classifyForecast, nearest, pickLine, LOAD_LABEL, sgDate,
   metersFrom, recordBoarded, migrateCollection, collectionStats, findStop, createRefreshGate,
+  findStops, historyAction, orderPool, recordOpen,
 } from './lib.js';
 import { createScene } from './scene.js';
 
@@ -326,7 +327,7 @@ function renderCollection() {
   const { met, rides } = collectionStats(state.collection);
   $('collection-stats').textContent = `${met} of ${state.pool.length} collected · ${rides} boarding${rides === 1 ? '' : 's'}. A character joins your collection when you confirm you boarded their bus.`;
 
-  for (const entry of state.pool) {
+  for (const entry of orderPool(state.pool, state.collection)) {
     const owned = state.collection[entry.id];
     if (!owned) {
       const cell = el('div', 'cell locked', '?');
@@ -449,12 +450,20 @@ function stopLabel(code) {
 }
 
 // Each stop has its own URL (?stop=CODE). The bare path always opens an empty home page.
+function showOpenDays(days) {
+  $('open-days').textContent = `Used at a stop on ${days.length} day${days.length === 1 ? '' : 's'} so far.`;
+}
+
 function selectStop(code, { push = true } = {}) {
+  const action = historyAction(state.stopCode, code); // before state.stopCode changes
   state.stopCode = code;
   state.latest = null;
   state.confirming = null;
   store.set('last-stop', code);
-  if (push) history.pushState({}, '', `${location.pathname}?stop=${encodeURIComponent(code)}`);
+  const days = recordOpen(store.get('open-days', []), sgDate(), 'stop');
+  store.set('open-days', days);
+  showOpenDays(days);
+  if (push) history[action === 'replace' ? 'replaceState' : 'pushState']({}, '', `${location.pathname}?stop=${encodeURIComponent(code)}`);
   const { name, road } = stopLabel(code);
   $('stop-name').textContent = name;
   $('stop-meta').textContent = `${road} · ${code}`;
@@ -488,14 +497,11 @@ function renderResults(codes, note) {
 function searchStops(q) {
   const query = q.trim().toLowerCase();
   if (query.length < 2) return renderResults([], 'Type at least 2 characters.');
-  const hits = [];
-  for (const [code, [, , name, road]] of Object.entries(state.stops)) {
-    if (code.startsWith(query) || name.toLowerCase().includes(query) || road.toLowerCase().includes(query)) {
-      hits.push(code);
-      if (hits.length >= 25) break;
-    }
-  }
-  renderResults(hits, hits.length ? '' : 'No stops match that.');
+  const { codes, total } = findStops(state.stops, query);
+  let note = '';
+  if (!total) note = 'No stops match that.';
+  else if (total > codes.length) note = `Showing ${codes.length} of ${total}. Keep typing to narrow.`;
+  renderResults(codes, note);
 }
 
 function findNearest() {
@@ -574,10 +580,7 @@ function route() {
 
 // ---------- boot ----------
 async function init() {
-  const today = sgDate();
-  const days = logOpen(store.get('open-days', []), today);
-  store.set('open-days', days);
-  $('open-days').textContent = `Opened on ${days.length} day${days.length === 1 ? '' : 's'} so far.`;
+  showOpenDays(store.get('open-days', []));
 
   state.scene = createScene($('scene-canvas'), { reduceMotion });
   // v2 holds boarded characters only. Carry over earlier entries the owner marked as ridden.
