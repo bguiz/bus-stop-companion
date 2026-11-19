@@ -10,6 +10,7 @@ import { slideStep } from './fixes/carousel-wrap.js';
 import { pickerState } from './fixes/picker-close.js';
 import { announcements, nextTab } from './fixes/a11y.js';
 import { failureMode, staleLabel } from './fixes/keep-last-list.js';
+import { needsFetch, chooseForecast, themeKind } from './fixes/weather-fallback.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -18,6 +19,7 @@ const TAXI_API = 'https://api.data.gov.sg/v1/transport/taxi-availability';
 const ANILIST_API = 'https://graphql.anilist.co';
 const REFRESH_MS = 20000; // arrivelah2 caches for ~15s; never poll faster
 const FORECAST_TTL_MS = 5 * 60 * 1000;
+const FORECAST_MAX_STALE_MS = 30 * 60 * 1000;
 const TAXI_TTL_MS = 60 * 1000;
 const TAXI_RADIUS_M = 3000;
 const MAX_TAXIS = 80;
@@ -110,18 +112,26 @@ function avatar(detail, fallbackName, cls = 'avatar') {
 }
 
 // ---------- weather + taxis (data.gov.sg) ----------
+function forecastWeather(forecast, lat, lng) {
+  const { area_metadata: areas, items } = forecast;
+  const area = nearest(areas, lat, lng, (a) => a.label_location.latitude, (a) => a.label_location.longitude);
+  const text = items[0].forecasts.find((f) => f.area === area.name)?.forecast ?? '';
+  return { area: area.name, text, kind: classifyForecast(text) };
+}
+
 async function getWeather(lat, lng) {
   try {
-    if (!state.forecast || Date.now() - state.forecastAt > FORECAST_TTL_MS) {
-      state.forecast = (await fetchJson(FORECAST_API)).data;
-      state.forecastAt = Date.now();
+    const policy = { cached: state.forecast, cachedAt: state.forecastAt, now: Date.now(), ttlMs: FORECAST_TTL_MS, maxStaleMs: FORECAST_MAX_STALE_MS };
+    let fetched = null;
+    if (needsFetch(policy)) {
+      try { fetched = (await fetchJson(FORECAST_API)).data; } catch { /* keep the last good forecast */ }
     }
-    const { area_metadata: areas, items } = state.forecast;
-    const area = nearest(areas, lat, lng, (a) => a.label_location.latitude, (a) => a.label_location.longitude);
-    const text = items[0].forecasts.find((f) => f.area === area.name)?.forecast ?? '';
-    return { area: area.name, text, kind: classifyForecast(text) };
+    const forecast = chooseForecast({ ...policy, fetched });
+    if (!forecast) return null; // weather is a bonus; the page works without it
+    if (forecast === fetched) { state.forecast = fetched; state.forecastAt = Date.now(); }
+    return forecastWeather(forecast, lat, lng);
   } catch {
-    return null; // weather is a bonus; the page works without it
+    return null;
   }
 }
 
@@ -147,7 +157,7 @@ async function getTaxis(lat, lng) {
 
 function showWeather(w) {
   const node = $('weather');
-  document.body.dataset.weather = w ? w.kind : 'fair';
+  document.body.dataset.weather = themeKind(w, document.body.dataset.weather);
   node.hidden = !w;
   if (!w) return;
   node.textContent = '';
@@ -364,7 +374,12 @@ async function refresh() {
       },
       fetchChars: (ids) => ensureCharacters(ids),
       cachedChars: () => store.get('chars-v1', {}),
-      lastWeather: () => (state.weather && state.weather.code === code ? state.weather.w : null),
+      lastWeather: () => {
+        if (state.weather && state.weather.code === code) return state.weather.w;
+        // First draw at a new stop: use the cached forecast (if recent) rather than showing nothing.
+        const f = chooseForecast({ cached: state.forecast, cachedAt: state.forecastAt, now: Date.now(), ttlMs: FORECAST_MAX_STALE_MS, maxStaleMs: FORECAST_MAX_STALE_MS });
+        try { return f ? forecastWeather(f, lat, lng) : null; } catch { return null; }
+      },
       isCurrent,
       prepare: (arrivals) => {
         const services = (arrivals.services || []).filter((s) => s.next || s.subsequent);
