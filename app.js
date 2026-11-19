@@ -12,6 +12,7 @@ import { announcements, nextTab } from './fixes/a11y.js';
 import { failureMode, staleLabel } from './fixes/keep-last-list.js';
 import { needsFetch, chooseForecast, themeKind } from './fixes/weather-fallback.js';
 import { locationOutcome, formatDistance } from './fixes/geo-far.js';
+import { sceneTaxis } from './fixes/taxi-toggle.js';
 import { loadBoard, reconcileKeys, avatarNeedsReplacing } from './board.js';
 
 const ARRIVALS_API = 'https://arrivelah2.busrouter.sg/';
@@ -346,11 +347,26 @@ async function updateScene({ services, chars, slots, stop }, ticket, code) {
       });
     });
   }
-  const taxis = state.showTaxis ? await getTaxis(lat, lng) : [];
+  const taxis = sceneTaxis(state.showTaxis, state.showTaxis ? await getTaxis(lat, lng) : []);
   if (!gate.isCurrent(ticket)) return;
   state.scene.setData({ stopKey: code, stopName: stopLabel(code).name, buses, taxis, showTaxis: state.showTaxis, kind: document.body.dataset.weather });
   const placed = buses.filter((b) => b.first).length;
   $('scene-note').textContent = sceneNote(placed, noGps);
+}
+
+let redrawSeq = 0;
+// Redraw the scene from the last data (taxi toggle). No arrivals fetch, no refresh gate.
+async function redrawScene() {
+  const latest = state.latest;
+  const code = state.stopCode;
+  if (!latest || !code) return;
+  const seq = ++redrawSeq;
+  const [lng, lat] = latest.stop;
+  // getTaxis serves the cache when fresh (needsTaxiFetch false) and shares one in-flight request otherwise.
+  const taxis = sceneTaxis(state.showTaxis, state.showTaxis ? await getTaxis(lat, lng) : []);
+  // Drop the draw if the user left this stop, new data arrived, or a later toggle superseded this one.
+  if (seq !== redrawSeq || state.stopCode !== code || state.latest !== latest) return;
+  state.scene.setData({ stopName: stopLabel(code).name, taxis, showTaxis: state.showTaxis });
 }
 
 async function refresh() {
@@ -736,7 +752,7 @@ async function init() {
   $('taxi-toggle').addEventListener('change', (e) => {
     state.showTaxis = e.target.checked;
     store.set('taxi-spirits', state.showTaxis);
-    refresh();
+    redrawScene().catch(() => {});
   });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) state.scene.stop();
